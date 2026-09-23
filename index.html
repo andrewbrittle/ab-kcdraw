@@ -289,7 +289,26 @@ const gGhost = $('g-ghost'), gDone = $('g-done'), gHint = $('g-hint'), gInk = $(
 /* ---------- storage (best effort) ---------- */
 function load(key, fallback) { try { return JSON.parse(localStorage.getItem(key)) || fallback; } catch (e) { return fallback; } }
 function save(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {} }
-const scores = load(STORE_KEY, {});                     // keyed by card number
+/* ---------- scoring (recorded, not shown yet) ----------
+   Only COLD recall counts towards a score: Recall on a kanji you haven't just
+   watched or traced in this visit. Recall straight after Watch/Trace, or a
+   second go after finishing, is logged as warm practice and ignored.
+   Mistakes are kept by type so they can be weighted later. Order, direction
+   and hints are memory errors; shape misses are mostly drawing, so they
+   count for little.
+   Stored per card number: { cold: {tries, clean}, log: [last 20 attempts] }. */
+const SCORE_KEY = 'kanjiStrokes.scores.v1';
+const SCORE_WEIGHTS = { order: 1, dir: 1, hint: 1, shape: 0.25 };
+const LOG_MAX = 20;
+const scores = load(SCORE_KEY, {});
+function memoryErrors(e) { return e.order * SCORE_WEIGHTS.order + e.dir * SCORE_WEIGHTS.dir + e.hint * SCORE_WEIGHTS.hint + e.shape * SCORE_WEIGHTS.shape; }
+function recordAttempt(n, e, cold) {
+  const rec = scores[n] || { cold: { tries: 0, clean: 0 }, log: [] };
+  rec.log.push({ t: Date.now(), cold, order: e.order, dir: e.dir, shape: e.shape, hint: e.hint });
+  if (rec.log.length > LOG_MAX) rec.log = rec.log.slice(-LOG_MAX);
+  if (cold) { rec.cold.tries++; if (e.order + e.dir + e.hint === 0) rec.cold.clean++; }
+  scores[n] = rec; save(SCORE_KEY, scores);
+}
 const settings = Object.assign({ mode: 'watch', len: 'normal', romaji: true, light: false }, load(STORE_KEY + '.settings', {}));
 // Earlier builds saved the drill's last step as the home choice, which could
 // leave it stuck on Recall. Reset that once.
@@ -347,7 +366,7 @@ function judge(user, ref) {
 }
 
 /* ---------- state ---------- */
-const state = { mode: 'watch', idx: 0, stroke: 0, misses: 0, strokeMisses: 0, complete: false, token: 0, drawing: null };
+const state = { mode: 'watch', idx: 0, stroke: 0, errs: null, warm: false, strokeMisses: 0, complete: false, token: 0, drawing: null };
 const cur = () => KANJI[state.idx];
 
 /* ---------- small helpers ---------- */
@@ -391,22 +410,16 @@ function show(id) {
   window.scrollTo(0, 0);
 }
 
-function confClass(rec) {
-  if (!rec) return '';
-  const m = rec.last;
-  return m === 0 ? (rec.clean >= 2 ? 'c-pos3' : 'c-pos2') : m <= 2 ? 'c-pos1' : m <= 4 ? 'c-neg1' : 'c-neg2';
-}
-
 function renderHome() {
   const first = KANJI[0].n, last = KANJI[KANJI.length - 1].n;
   $('home-sub').textContent = KANJI.length + ' kanji. Tap one, or start the page from the top';
-  $('page-head').innerHTML = '<span>Page 1 · cards ' + first + '–' + last + '</span><span>recall results shade the tiles</span>';
+  $('page-head').innerHTML = '<span>Page 1 · cards ' + first + '–' + last + '</span>';
   document.querySelectorAll('#mode-pills .pill').forEach(b => b.classList.toggle('active', b.dataset.mode === settings.mode));
   $('mode-desc').textContent = MODE_DESC[settings.mode];
   const grid = $('grid'); clear(grid);
   KANJI.forEach((k, i) => {
     const t = document.createElement('button');
-    t.className = 'tile ' + confClass(scores[k.n]);
+    t.className = 'tile';
     t.id = 'tile-' + k.n;
     t.innerHTML = '<div class="tk"></div><div class="tm"></div>';
     t.querySelector('.tk').textContent = k.k;
@@ -420,7 +433,7 @@ function setMode(m) { settings.mode = m; saveSettings(); }
 
 /* ---------- drill ---------- */
 // Each kanji begins at the starting step chosen on the home screen.
-function openDrill(i) { state.idx = i; state.mode = settings.mode; show('screen-drill'); start(); }
+function openDrill(i) { state.idx = i; state.mode = settings.mode; state.warm = false; show('screen-drill'); start(); }
 function goStep(m) { state.mode = m; start(); }
 
 function renderReadings(el, list, cls) {
@@ -468,12 +481,14 @@ function renderControls() {
   }
 }
 
-function nextKanji() { state.idx = Math.min(state.idx + 1, KANJI.length - 1); state.mode = settings.mode; start(); }
+function nextKanji() { state.idx = Math.min(state.idx + 1, KANJI.length - 1); state.mode = settings.mode; state.warm = false; start(); }
 function goHome() { renderHome(); show('screen-home'); }
 
 async function start() {
   const token = ++state.token;
-  state.stroke = 0; state.misses = 0; state.strokeMisses = 0; state.complete = false;
+  state.stroke = 0; state.strokeMisses = 0; state.complete = false;
+  state.errs = { order: 0, dir: 0, shape: 0, hint: 0 };
+  if (state.mode !== 'recall') state.warm = true;   // seeing it drawn makes any recall that follows warm
   cancelInk();
   [gGhost, gDone, gHint, gInk, gNums].forEach(clear);
   renderCard(); renderProgress(); renderControls();
@@ -505,7 +520,7 @@ async function start() {
 async function hint(manual) {
   if (state.mode === 'watch' || state.complete) return;
   const token = state.token, i = state.stroke;
-  if (manual) state.misses++;
+  state.errs.hint++;
   clear(gHint);
   const p = mkPath(cur().s[i], 'hint', gHint);
   await animateStroke(p);
@@ -518,15 +533,16 @@ function finish() {
   board.classList.add('locked');
   clear(gHint);
   cur().s.forEach((_, i) => mkNum(i, false));
-  const m = state.misses;
-  if (state.mode === 'recall') {
-    const n = cur().n, rec = scores[n] || { tries: 0, clean: 0 };
-    rec.tries++; if (m === 0) rec.clean++; rec.last = m;
-    scores[n] = rec; save(STORE_KEY, scores);
-  }
+  const e = state.errs;
+  if (state.mode === 'recall') { recordAttempt(cur().n, e, !state.warm); state.warm = true; }
   renderCard(); renderControls();
-  if (m === 0) feedback(state.mode === 'recall' ? 'Clean from memory' : 'Traced with no mistakes', 'good');
-  else feedback('Done, with ' + m + (m === 1 ? ' mistake' : ' mistakes'), 'info');
+  const parts = [];
+  if (e.order) parts.push(e.order + ' out of order');
+  if (e.dir) parts.push(e.dir + ' wrong direction');
+  if (e.hint) parts.push(e.hint + (e.hint === 1 ? ' hint' : ' hints'));
+  if (e.shape) parts.push(e.shape + ' redrawn');
+  if (!parts.length) feedback(state.mode === 'recall' ? 'Clean from memory' : 'Traced with no mistakes', 'good');
+  else feedback('Done: ' + parts.join(', '), 'info');
 }
 
 function accept(i) {
@@ -539,8 +555,8 @@ function accept(i) {
   else feedback('Good. Stroke ' + (state.stroke + 1) + ' next', 'good');
 }
 
-function reject(path, msg) {
-  state.misses++; state.strokeMisses++;
+function reject(path, msg, type) {
+  state.errs[type]++; state.strokeMisses++;
   path.setAttribute('class', 'stroke bad');
   requestAnimationFrame(() => requestAnimationFrame(() => path.classList.add('fade')));
   setTimeout(() => path.remove(), 700);
@@ -555,11 +571,11 @@ function evaluate(raw, path) {
   const user = resample(raw, N);
   const verdict = judge(user, k.pts[i]);
   if (verdict === 'ok') { path.remove(); accept(i); return; }
-  if (verdict === 'reversed') { reject(path, 'Right place, wrong direction'); return; }
+  if (verdict === 'reversed') { reject(path, 'Right place, wrong direction', 'dir'); return; }
   for (let j = i + 1; j < k.pts.length; j++) {
-    if (judge(user, k.pts[j]) === 'ok') { reject(path, 'That is stroke ' + (j + 1) + '. Stroke ' + (i + 1) + ' comes first'); return; }
+    if (judge(user, k.pts[j]) === 'ok') { reject(path, 'That is stroke ' + (j + 1) + '. Stroke ' + (i + 1) + ' comes first', 'order'); return; }
   }
-  reject(path, 'Not quite. Try stroke ' + (i + 1) + ' again');
+  reject(path, 'Not quite. Try stroke ' + (i + 1) + ' again', 'shape');
 }
 
 /* ---------- pointer input ---------- */
