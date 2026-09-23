@@ -115,7 +115,9 @@
     color: var(--text); font-family: inherit;
   }
   .tile:hover { border-color: var(--border-hover); }
-  #kselect-slot { margin-top: 0.75rem; }
+  #start-block { gap: 0.75rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+  #start-block .section-label { margin: 0; }
+  #start-block .mode-desc { margin-bottom: 0.25rem; }
   #kanji-select { gap: 0.9rem; }
   #kanji-select .section-label { margin: 0.5rem 0 0; }
   .tile.selected { border-color: var(--accent); background: var(--accent-dim); box-shadow: inset 0 0 0 2px var(--accent); }
@@ -126,20 +128,25 @@
   .tile.c-pos3 { background: var(--conf-pos3); }
 
   /* Kana chart rows, as in the Japanese Drill app: tap a row to select it. */
+  /* Kana chart: tap a character to pick it, or the row label for the whole row.
+     Drawing practice needs single characters, unlike the drill app's rows. */
   .kana-ref-grid { display: flex; flex-direction: column; gap: 6px; }
-  .kana-ref-row {
-    display: flex; gap: 6px; border-radius: var(--radius); border: 1px solid transparent;
-    padding: 4px; cursor: pointer; transition: all 0.15s; user-select: none;
-    background: transparent; font-family: inherit; color: var(--text); width: 100%;
+  .kana-ref-row { display: flex; gap: 6px; align-items: stretch; }
+  .row-label {
+    flex: 0 0 34px; border-radius: var(--radius); border: 1px dashed var(--border-hover);
+    background: transparent; color: var(--text-dim); font-size: 11px; font-weight: 700;
+    cursor: pointer; font-family: inherit; padding: 0;
   }
-  .kana-ref-row:hover { border-color: var(--border-hover); }
-  .kana-ref-row.selected { border-color: var(--accent); background: var(--accent-dim); }
+  .row-label:hover { color: var(--accent); border-color: var(--accent); }
+  .row-label.full { color: var(--accent); border-style: solid; border-color: var(--accent); background: var(--accent-dim); }
   .kana-ref-card {
     flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-    padding: 10px 4px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0;
+    padding: 10px 2px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0;
+    cursor: pointer; font-family: inherit; color: var(--text);
   }
-  .kana-ref-row.selected .kana-ref-card { background: transparent; border-color: transparent; }
-  .kana-ref-card.empty { background: transparent; border-color: transparent; }
+  .kana-ref-card:hover { border-color: var(--border-hover); }
+  .kana-ref-card.selected { border-color: var(--accent); background: var(--accent-dim); box-shadow: inset 0 0 0 2px var(--accent); }
+  .kana-ref-card.empty { background: transparent; border-color: transparent; cursor: default; }
   .kana-ref-char { font-family: var(--jp); font-size: 28px; font-weight: 600; color: var(--text); line-height: 1; }
   .kana-ref-rom { font-size: 11px; font-weight: 600; color: var(--text-muted); }
   .group-card {
@@ -243,9 +250,9 @@
   <div class="nav-row">
     <button class="settings-btn" id="gear" title="Settings" aria-label="Settings">⚙</button>
     <div class="nav-pills" id="nav-pills">
+      <button class="nav-pill" data-set="kanji" id="nav-kanji">漢字</button>
       <button class="nav-pill" data-set="hira" id="nav-hira">ひらがな</button>
       <button class="nav-pill" data-set="kata" id="nav-kata">カタカナ</button>
-      <button class="nav-pill" data-set="kanji" id="nav-kanji">漢字</button>
     </div>
   </div>
 </header>
@@ -394,11 +401,14 @@ function recordAttempt(n, e, cold) {
   if (cold) { rec.cold.tries++; if (e.order + e.dir + e.hint === 0) rec.cold.clean++; }
   scores[n] = rec; save(SCORE_KEY, scores);
 }
-const settings = Object.assign({ set: 'hira', rows: { hira: [], kata: [] }, mode: 'watch', len: 'normal', romaji: true, light: false }, load(STORE_KEY + '.settings', {}));
+const settings = Object.assign({ set: 'hira', picked: { hira: [], kata: [] }, mode: 'watch', len: 'normal', romaji: true, light: false }, load(STORE_KEY + '.settings', {}));
 // Earlier builds saved the drill's last step as the home choice, which could
 // leave it stuck on Recall. Reset that once.
 if (settings.v !== 2) { settings.mode = 'watch'; settings.v = 2; }
-if (!['hira', 'kata', 'kanji'].includes(settings.set)) settings.set = 'hira';   // older builds stored a set id here
+// Always open on the calm Kanji screen rather than the full kana chart.
+settings.set = 'kanji';
+settings.picked = settings.picked || { hira: [], kata: [] };
+delete settings.rows;   // row-only selection from an earlier build   // older builds stored a set id here
 const saveSettings = () => save(STORE_KEY + '.settings', settings);
 // Always set explicitly, so the page stays dark unless Light theme is switched on.
 function applyTheme() { document.documentElement.setAttribute('data-theme', settings.light ? 'light' : 'dark'); }
@@ -481,8 +491,8 @@ function kanaRows(set) {
   return rows;
 }
 function selectedKana(set) {
-  const chosen = settings.rows[set.id] || [];
-  return kanaRows(set).flatMap((row, r) => chosen.includes(r) ? row.filter(i => i !== null).map(i => set.items[i]) : []);
+  const chosen = new Set(settings.picked[set.id] || []);
+  return set.items.filter(k => chosen.has(k.id));      // chart order
 }
 
 /* ---------- small helpers ---------- */
@@ -538,35 +548,39 @@ function renderHome() {
 
 function renderKanaHome(set) {
   $('home-title').textContent = set.label;
-  $('home-sub').textContent = 'Tap a row to select it for practice.';
-  const chosen = settings.rows[set.id] = settings.rows[set.id] || [];
-  const rows = kanaRows(set);
+  $('home-sub').textContent = 'Tap characters to pick them, or a row label for the whole row.';
+  const chosen = new Set(settings.picked[set.id] = settings.picked[set.id] || []);
+  const store = () => { settings.picked[set.id] = [...chosen]; saveSettings(); renderHome(); };
   const grid = $('kana-grid'); clear(grid);
-  rows.forEach((row, r) => {
-    const el = document.createElement('button');
-    el.className = 'kana-ref-row' + (chosen.includes(r) ? ' selected' : '');
-    el.id = 'row-' + r;
+  kanaRows(set).forEach((row, r) => {
+    const items = row.filter(i => i !== null).map(i => set.items[i]);
+    const full = items.every(k => chosen.has(k.id));
+    const el = document.createElement('div');
+    el.className = 'kana-ref-row';
+    const lab = document.createElement('button');
+    lab.className = 'row-label' + (full ? ' full' : ''); lab.id = 'row-' + r;
+    lab.textContent = items[0].m;
+    lab.setAttribute('aria-label', 'Select the ' + items[0].m + ' row');
+    lab.onclick = () => { items.forEach(k => full ? chosen.delete(k.id) : chosen.add(k.id)); store(); };
+    el.appendChild(lab);
     row.forEach(i => {
-      const c = document.createElement('div');
-      if (i === null) { c.className = 'kana-ref-card empty'; el.appendChild(c); return; }
-      c.className = 'kana-ref-card';
+      if (i === null) { const c = document.createElement('div'); c.className = 'kana-ref-card empty'; el.appendChild(c); return; }
+      const k = set.items[i];
+      const c = document.createElement('button');
+      c.className = 'kana-ref-card' + (chosen.has(k.id) ? ' selected' : ''); c.id = 'kana-' + i;
       c.innerHTML = '<span class="kana-ref-char"></span><span class="kana-ref-rom"></span>';
-      c.firstChild.textContent = set.items[i].k; c.lastChild.textContent = set.items[i].m;
+      c.firstChild.textContent = k.k; c.lastChild.textContent = k.m;
+      c.onclick = () => { chosen.has(k.id) ? chosen.delete(k.id) : chosen.add(k.id); store(); };
       el.appendChild(c);
     });
-    el.onclick = () => {
-      const at = chosen.indexOf(r);
-      if (at >= 0) chosen.splice(at, 1); else chosen.push(r);
-      chosen.sort((a, b) => a - b); saveSettings(); renderHome();
-    };
     grid.appendChild(el);
   });
-  const all = chosen.length === rows.length;
+  const all = set.items.every(k => chosen.has(k.id));
   $('select-all-label').textContent = (all ? 'Deselect all' : 'Select all') + ' — ' + set.label;
   $('select-all').classList.toggle('selected', all);
-  $('select-all').onclick = () => { settings.rows[set.id] = all ? [] : rows.map((_, r) => r); saveSettings(); renderHome(); };
-  const n = selectedKana(set).length;
-  $('start-btn').textContent = n ? 'Practise ' + n + (n === 1 ? ' character' : ' characters') : 'Select some rows first';
+  $('select-all').onclick = () => { set.items.forEach(k => all ? chosen.delete(k.id) : chosen.add(k.id)); store(); };
+  const n = chosen.size;
+  $('start-btn').textContent = n ? 'Start · ' + n + (n === 1 ? ' character' : ' characters') : 'Pick some characters first';
   $('start-btn').disabled = n === 0;
   $('start-btn').onclick = () => openDrill(selectedKana(set), 0);
 }
