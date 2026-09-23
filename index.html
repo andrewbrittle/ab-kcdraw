@@ -1,0 +1,618 @@
+<title>Kanji Strokes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
+  /* Tokens copied from kanji-cards. Dark is the base; light applies when the
+     viewer's system or theme choice asks for it. */
+  :root {
+    color-scheme: dark;
+    --bg: #0f0f0f; --surface: #1a1a1a; --surface2: #242424;
+    --border: rgba(255,255,255,0.08); --border-hover: rgba(255,255,255,0.16);
+    --text: #f8f6f2; --text-muted: rgba(248,246,242,0.66); --text-dim: rgba(248,246,242,0.42);
+    --accent: #e8c97a; --accent-dim: rgba(232,201,122,0.12);
+    --green: #6fcf97; --green-dim: rgba(111,207,151,0.12);
+    --red: #eb5757; --red-dim: rgba(235,87,87,0.12);
+    --blue: #7eb8f7; --blue-dim: rgba(126,184,247,0.12);
+    --radius: 10px; --radius-lg: 16px;
+    --conf-neg2: rgba(235,87,87,0.30); --conf-neg1: rgba(235,87,87,0.15);
+    --conf-pos1: rgba(111,207,151,0.15); --conf-pos2: rgba(111,207,151,0.30); --conf-pos3: rgba(111,207,151,0.45);
+    --card-border: rgba(255,255,255,0.22);
+    --ghost: rgba(248,246,242,0.13); --guide: rgba(255,255,255,0.10);
+    --on-accent: #0f0f0f;
+    --jp: 'BIZ UDPGothic', 'Hiragino Sans', 'Yu Gothic', 'Noto Sans JP', sans-serif;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      color-scheme: light;
+      --bg: #f7f5f0; --surface: #ffffff; --surface2: #efece4;
+      --border: rgba(0,0,0,0.10); --border-hover: rgba(0,0,0,0.20);
+      --text: #1a1a1a; --text-muted: rgba(26,26,26,0.66); --text-dim: rgba(26,26,26,0.45);
+      --accent: #a9740f; --accent-dim: rgba(169,116,15,0.12);
+      --green: #2f9e5c; --green-dim: rgba(47,158,92,0.12);
+      --red: #c53d3d; --red-dim: rgba(197,61,61,0.12);
+      --blue: #2f6fa8; --blue-dim: rgba(47,111,168,0.12);
+      --card-border: rgba(0,0,0,0.20);
+      --ghost: rgba(26,26,26,0.12); --guide: rgba(0,0,0,0.10); --on-accent: #ffffff;
+    }
+  }
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --bg: #f7f5f0; --surface: #ffffff; --surface2: #efece4;
+    --border: rgba(0,0,0,0.10); --border-hover: rgba(0,0,0,0.20);
+    --text: #1a1a1a; --text-muted: rgba(26,26,26,0.66); --text-dim: rgba(26,26,26,0.45);
+    --accent: #a9740f; --accent-dim: rgba(169,116,15,0.12);
+    --green: #2f9e5c; --green-dim: rgba(47,158,92,0.12);
+    --red: #c53d3d; --red-dim: rgba(197,61,61,0.12);
+    --blue: #2f6fa8; --blue-dim: rgba(47,111,168,0.12);
+    --card-border: rgba(0,0,0,0.20);
+    --ghost: rgba(26,26,26,0.12); --guide: rgba(0,0,0,0.10); --on-accent: #ffffff;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg); color: var(--text); font-weight: 500;
+    min-height: 100vh; display: flex; flex-direction: column;
+  }
+  header {
+    padding: 0.9rem 1.25rem; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; background: var(--surface);
+  }
+  .app-heading { font-size: 19px; font-weight: 700; font-family: var(--jp); }
+  .app-heading span { color: var(--accent); }
+  .icon-btn {
+    width: 32px; height: 32px; border-radius: 99px; border: 1px solid var(--border);
+    background: transparent; color: var(--text-muted); font-size: 15px; cursor: pointer;
+  }
+  .icon-btn:hover { border-color: var(--border-hover); color: var(--text); }
+  .icon-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  main { flex: 1; display: flex; justify-content: center; padding: 1.5rem 16px 3rem; }
+  .screen { width: 100%; max-width: 480px; display: none; flex-direction: column; gap: 1rem; }
+  .screen.visible { display: flex; }
+  .title { font-size: 22px; font-weight: 700; text-align: center; }
+  .sub { font-size: 14px; color: var(--text-muted); text-align: center; }
+
+  .pill-row { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    padding: 6px 14px; border-radius: 99px; border: 1.5px solid var(--accent);
+    background: transparent; color: var(--text-muted); font-size: 13px; font-weight: 600;
+    cursor: pointer; font-family: inherit; white-space: nowrap;
+  }
+  .pill.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+  .mode-desc { font-size: 12px; color: var(--text-dim); text-align: center; min-height: 15px; }
+
+  .page-head {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 12px; font-weight: 700; color: var(--text-dim); margin: 0.2rem 0 -0.4rem; padding: 0 0.2rem;
+  }
+  .tile-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .tile {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 8px 2px 6px; text-align: center; cursor: pointer; user-select: none; min-width: 0;
+    color: var(--text); font-family: inherit;
+  }
+  .tile:hover { border-color: var(--border-hover); }
+  .tile .tk { font-family: var(--jp); font-size: 26px; line-height: 1.1; }
+  .tile .tm { font-size: 10px; color: var(--text-muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 2px; }
+  .tile.c-neg2 { background: var(--conf-neg2); } .tile.c-neg1 { background: var(--conf-neg1); }
+  .tile.c-pos1 { background: var(--conf-pos1); } .tile.c-pos2 { background: var(--conf-pos2); }
+  .tile.c-pos3 { background: var(--conf-pos3); }
+
+  .btn-row { display: flex; gap: 8px; }
+  .btn {
+    flex: 1; padding: 12px; border-radius: var(--radius); border: 1px solid var(--border);
+    background: transparent; color: var(--text); font-size: 14px; font-weight: 600;
+    cursor: pointer; font-family: inherit;
+  }
+  .btn:hover { border-color: var(--border-hover); background: var(--surface2); }
+  .screen > .btn { flex: none; }
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 700; }
+  .btn-primary:hover { opacity: 0.88; background: var(--accent); }
+  .btn-hint { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
+  .btn-hint:hover { border-color: var(--accent); background: var(--accent-dim); }
+  .btn:disabled { opacity: 0.35; cursor: default; }
+
+  .progress-wrap { display: flex; align-items: center; gap: 12px; }
+  .progress-bg { flex: 1; height: 3px; background: var(--surface2); border-radius: 99px; }
+  .progress-fill { height: 3px; border-radius: 99px; background: var(--accent); transition: width 0.3s; }
+  .progress-label { font-size: 12px; font-weight: 600; color: var(--text-dim); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+  .card {
+    position: relative; background: var(--surface); border: 1.5px solid var(--card-border);
+    border-radius: var(--radius-lg); padding: 1.25rem 1.25rem 1.25rem;
+    display: flex; flex-direction: column; gap: 0.75rem;
+  }
+  .mode-tag {
+    position: absolute; top: 12px; right: 12px;
+    font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 99px;
+    color: var(--accent); border: 1px solid var(--accent); background: var(--accent-dim);
+  }
+  .back-head { display: flex; align-items: center; gap: 1rem; padding-right: 4.5rem; }
+  .k-mid { font-family: var(--jp); font-size: 56px; line-height: 1; min-width: 56px; text-align: center; }
+  .k-mid.hidden-k { color: var(--text-dim); }
+  .back-head .m { font-size: 18px; font-weight: 700; }
+  .back-head .strokes { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+  .sec { border-top: 1px solid var(--border); padding-top: 0.55rem; display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; align-items: baseline; }
+  .sec-t { font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-dim); }
+  .rd { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+  .rd-item { font-size: 15px; font-family: var(--jp); }
+  .rd-item small { font-family: -apple-system, sans-serif; font-size: 12px; color: var(--text-muted); margin-left: 4px; }
+  .rd-item.on small { text-transform: uppercase; }
+  .no-romaji .rd-item small { display: none; }
+  .none { font-size: 13px; color: var(--text-dim); }
+
+  .board-wrap { width: 100%; max-width: 340px; margin: 0 auto; }
+  #board {
+    display: block; width: 100%; height: auto; aspect-ratio: 1; max-width: 100%;
+    background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius);
+    touch-action: none; user-select: none; -webkit-user-select: none; cursor: crosshair;
+  }
+  #board.locked { cursor: default; }
+  .guide { stroke: var(--guide); stroke-width: 0.5; stroke-dasharray: 2 2; fill: none; }
+  .stroke { fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-width: 4.2; }
+  .ghost { stroke: var(--ghost); }
+  .ink { stroke: var(--text); }
+  .done { stroke: var(--text); transition: stroke 0.6s ease; }
+  .done.fresh { stroke: var(--green); transition: none; }
+  .bad { stroke: var(--red); transition: opacity 0.45s ease 0.15s; }
+  .bad.fade { opacity: 0; }
+  .hint { stroke: var(--accent); }
+  .hint-faint { stroke: var(--accent); opacity: 0.35; }
+  .num { fill: var(--text-dim); font-size: 7px; font-weight: 700; font-family: -apple-system, sans-serif; }
+  .num.hl { fill: var(--accent); }
+
+  .feedback { min-height: 20px; font-size: 14px; font-weight: 600; text-align: center; color: var(--text-muted); }
+  .feedback.good { color: var(--green); }
+  .feedback.bad-msg { color: var(--red); }
+  .feedback.info { color: var(--accent); }
+
+  .stack { display: flex; flex-direction: column; gap: 8px; }
+  .setting {
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+    padding: 0.85rem 1.1rem; cursor: pointer; user-select: none; color: var(--text); font-family: inherit; text-align: left; width: 100%;
+  }
+  .setting.static { cursor: default; flex-direction: column; align-items: stretch; }
+  .setting .n { font-size: 15px; font-weight: 700; } .setting .d { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+  .toggle { width: 40px; height: 22px; border-radius: 99px; background: var(--surface2); border: 1px solid var(--border); position: relative; flex-shrink: 0; }
+  .toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: var(--text-dim); transition: all 0.2s; }
+  .setting.on .toggle { background: var(--accent); border-color: var(--accent); }
+  .setting.on .toggle::after { left: 21px; background: var(--on-accent); }
+  .credit { font-size: 11.5px; color: var(--text-dim); text-align: center; line-height: 1.5; }
+  .credit a { color: var(--text-muted); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .done, .bad, .progress-fill, .toggle::after { transition: none; }
+  }
+</style>
+
+<header>
+  <div class="app-heading"><span>漢字</span> strokes</div>
+  <button class="icon-btn" id="gear" title="Settings" aria-label="Settings">⚙</button>
+</header>
+
+<main id="main">
+  <!-- Home: mode choice and the page's tiles -->
+  <div class="screen visible" id="screen-home">
+    <div class="title">Kanji Strokes</div>
+    <div class="sub" id="home-sub"></div>
+    <div class="pill-row" id="mode-pills">
+      <button class="pill" data-mode="watch" id="mode-watch">Watch</button>
+      <button class="pill" data-mode="trace" id="mode-trace">Trace</button>
+      <button class="pill" data-mode="recall" id="mode-recall">Recall</button>
+    </div>
+    <div class="mode-desc" id="mode-desc"></div>
+    <div class="page-head" id="page-head"></div>
+    <div class="tile-grid" id="grid"></div>
+    <button class="btn btn-primary" id="start-btn">Start page 1</button>
+  </div>
+
+  <!-- Drill: one kanji at a time -->
+  <div class="screen" id="screen-drill">
+    <div class="progress-wrap">
+      <div class="progress-bg"><div class="progress-fill" id="prog" style="width:0%"></div></div>
+      <div class="progress-label" id="prog-label"></div>
+    </div>
+    <div class="card">
+      <span class="mode-tag" id="mode-tag"></span>
+      <div class="back-head">
+        <div class="k-mid" id="p-char"></div>
+        <div>
+          <div class="m" id="p-m"></div>
+          <div class="strokes" id="p-strokes"></div>
+        </div>
+      </div>
+      <div class="sec">
+        <span class="sec-t">On</span><div class="rd" id="p-on"></div>
+        <span class="sec-t">Kun</span><div class="rd" id="p-kun"></div>
+      </div>
+      <div class="board-wrap">
+        <svg id="board" viewBox="0 0 109 109" aria-label="Drawing area">
+          <line class="guide" x1="54.5" y1="0" x2="54.5" y2="109"></line>
+          <line class="guide" x1="0" y1="54.5" x2="109" y2="54.5"></line>
+          <g id="g-ghost"></g><g id="g-done"></g><g id="g-hint"></g><g id="g-ink"></g><g id="g-nums"></g>
+        </svg>
+      </div>
+      <div class="feedback" id="feedback"></div>
+    </div>
+    <div class="btn-row" id="controls"></div>
+    <button class="btn" id="back-btn">← Back to cards</button>
+  </div>
+
+  <!-- Settings -->
+  <div class="screen" id="screen-settings">
+    <div class="title">Settings</div>
+    <div class="sub">Everything is stored on this device only.</div>
+    <div class="setting static">
+      <div><div class="n">Stroke checking</div><div class="d" id="len-desc"></div></div>
+      <div class="pill-row" id="len-pills" style="justify-content:flex-start; margin-top:0.6rem;">
+        <button class="pill" data-len="strict" id="len-strict">Strict</button>
+        <button class="pill" data-len="normal" id="len-normal">Normal</button>
+        <button class="pill" data-len="relaxed" id="len-relaxed">Relaxed</button>
+      </div>
+    </div>
+    <button class="setting" id="set-romaji"><div><div class="n">Show romaji</div><div class="d">Romaji next to the readings</div></div><div class="toggle"></div></button>
+    <button class="btn" id="settings-back">← Back</button>
+    <p class="credit">Stroke order data from <a href="https://kanjivg.tagaini.net/" target="_blank" rel="noopener">KanjiVG</a> © Ulrich Apel, CC BY-SA 3.0.</p>
+  </div>
+</main>
+
+<script>
+const KANJI = [{"n":1,"k":"一","m":"One","on":[["イチ","ichi"]],"kun":[["ひと","hito"],["ひと(つ)","hito(tsu)"]],"s":["M11,54.25c3.19,0.62,6.25,0.75,9.73,0.5c20.64-1.5,50.39-5.12,68.58-5.24c3.6-0.02,5.77,0.24,7.57,0.49"],"p":[[4.25,54.13]]},{"n":2,"k":"二","m":"Two","on":[["ニ","ni"]],"kun":[["ふた","futa"],["ふた(つ)","futa(tsu)"]],"s":["M25.25,32.4c1.77,0.37,4.78,0.56,6.55,0.37c10.82-1.15,28.82-3.4,41.24-3.76c2.95-0.09,4.73,0.18,6.21,0.36","M12,80.75c2.37,0.5,6.73,0.67,9.09,0.5c23.79-1.75,45.04-4.12,67.49-4.74c3.95-0.11,6.32,0.24,8.3,0.49"],"p":[[17.5,33.13],[3.5,81.5]]},{"n":3,"k":"三","m":"Three","on":[["サン","san"]],"kun":[["み","mi"],["み(つ)","mi(tsu)"],["みっ(つ)","mit(tsu)"]],"s":["M27.5,23.65c3.09,0.73,6.29,0.36,9.4,0.06c10.2-1,27-2.94,38.97-3.57c3.06-0.16,6.09-0.2,9.14,0.23","M28.75,55.14c3.13,0.76,6.46,0.43,9.64,0.2c10.03-0.72,23.97-2.63,34.73-3.12c2.7-0.12,5.45-0.16,8.13,0.3","M13,87.83c3.94,1.01,7.72,0.96,11.75,0.72c18.41-1.07,41.27-3.39,61.12-4.07c3.63-0.13,7.2-0.1,10.75,0.78"],"p":[[18.0,25.78],[18.75,57.13],[3.75,91.63]]},{"n":4,"k":"四","m":"Four","on":[["シ","shi"]],"kun":[["よ","yo"],["よ(つ)","yo(tsu)"],["よっ(つ)","yot(tsu)"],["よん","yon"]],"s":["M14.5,31.48c1.51,1.51,2.25,3.27,2.53,5.2c1.14,7.9,2.61,25.18,4.39,40.83c0.29,2.55,0.34,3.81,0.64,6.24","M17.85,34.04c21.65-1.92,51.52-3.92,67.82-4.3c4.85-0.11,6.31,2.62,6.04,5.38c-0.9,9.02-4.17,28.29-6.41,39.62c-0.49,2.49-0.94,4.6-1.3,6.13","M40.5,36c0.08,0.64,0.12,1.65-0.16,2.57c-2.22,7.3-5.1,14.55-13.35,22.68","M59.75,34.25c0.8,1.05,1.44,2.29,1.49,3.92c0.11,3.62,0.05,7.05,0.05,9.89c0,6.94,0.71,7.54,9.47,7.54c4.99,0,8.86-0.72,10.25-1.72","M22.73,79.32c13.77-0.57,43.64-1.8,61.18-2.08"],"p":[[8.75,40.63],[20.75,29.13],[31.25,41.63],[52.25,40.13],[27.25,75.63]]},{"n":5,"k":"五","m":"Five","on":[["ゴ","go"]],"kun":[["いつ","itsu"],["いつ(つ)","itsu(tsu)"]],"s":["M31.75,23.15c2.8,0.67,5.54,0.42,8.36,0.12c9.3-0.99,22.18-2.4,34.14-3.21c2.49-0.17,5.04-0.33,7.5,0.2","M55.75,25.25c0.62,1.25,1.02,3.01,0.5,5c-3.12,11.88-14,44.12-19.75,59","M25.5,55.25c2.07,1.24,4.73,1.03,7,0.81c15.49-1.45,29.89-3.03,42.25-4.06c3-0.25,4.25,1.75,3.5,3.75c-2.24,5.96-6,20.75-7.75,31.5","M11.25,90.5c3.04,0.81,6.52,0.63,9.63,0.41c15.71-1.1,43.9-2.8,67.75-3.8c3.41-0.14,6.9-0.4,10.25,0.39"],"p":[[24.5,24.13],[47.5,33.5],[18.5,57.5],[3.5,91.5]]},{"n":6,"k":"六","m":"Six","on":[["ロク","roku"]],"kun":[["む","mu"],["むつ","mutsu"],["むっ(つ)","mut(tsu)"],["むい","mui"]],"s":["M51.87,17.5c1.78,1.78,2.71,3.48,2.71,6.5c0,6.46,0.12,9.16,0.12,14.35","M13.5,42.13c3.27,0.74,7.11,0.89,9.93,0.64c21.56-1.9,41.78-5.02,61.41-5.47c4.8-0.11,7.49,0.31,11.06,1.07","M38.11,58.6c0.51,1.37,0.42,3.67-0.49,5.29C33.38,71.38,24,82.38,15.41,88.75","M70.16,59.92c9.96,8.61,18.18,18.54,23.16,28.99"],"p":[[42.25,17.63],[5.5,43.63],[27.5,58.63],[60.5,58.63]]},{"n":7,"k":"七","m":"Seven","on":[["シチ","shichi"]],"kun":[["なな","nana"],["なな(つ)","nana(tsu)"],["なの","nano"]],"s":["M15.5,51.75c1.82,0.5,4.38,0.88,6.96,0.5c16.91-2.45,50.92-8.12,64.44-8.74c3.02-0.14,4.84,0.24,6.35,0.49","M43,20c1.38,1.38,2.15,3.25,2.15,5.26C45.15,29.5,45,71.84,45,76c0,10.5,2.25,12.25,20.25,12.25c18.75,0,20-3.75,20-2.75"],"p":[[8.5,53.5],[34.5,19.63]]},{"n":8,"k":"八","m":"Eight","on":[["ハチ","hachi"]],"kun":[["や","ya"],["や(つ)","ya(tsu)"],["やっ(つ)","yat(tsu)"],["よう","yō"]],"s":["M37.22,45c0.28,1.5,0.2,3.21-0.86,5.48c-4.23,9.02-11.48,20.4-24.1,32.02","M48,27.25c9.38,0.25,21.12,30,37.27,45.72c3.79,3.69,6.73,5.66,9.98,7.03"],"p":[[27.75,42.13],[51.75,22.63]]},{"n":9,"k":"九","m":"Nine","on":[["キュウ","kyū"],["ク","ku"]],"kun":[["ここの","kokono"],["ここの(つ)","kokono(tsu)"]],"s":["M41.88,14.38c1,1.38,1.5,3.25,1.5,5.12c0,40.13-9.12,57.5-28.5,68.75","M13.5,45.75c2.88,0.85,5.78,0.05,8.58-0.66c8.47-2.14,39.88-9.79,40.92-9.84c2.5-0.12,4.75,0.5,4.25,4.75c-0.5,4.25-5.5,20.75-7,32.5c-2.23,17.46,2,19.37,18.21,19.37c13.79,0,19.01-1.07,19.27-10.12"],"p":[[32.5,14.5],[5.5,46.63]]},{"n":10,"k":"十","m":"Ten","on":[["ジュウ","jū"],["ジッ","jit"]],"kun":[["とお","tō"],["と","to"]],"s":["M11.88,50.98c3.18,0.89,6.62,0.61,9.87,0.35c19.92-1.58,45.23-4.76,63.38-5.82c3.85-0.23,7.23-0.07,11,0.56","M52.22,11.63c1.4,1.4,2.2,3.96,2.2,6.26c0,1.13-0.03,51.22-0.19,73.41c-0.03,3.96-0.06,6.83-0.08,8.08"],"p":[[5.5,52.5],[42.75,12.5]]},{"n":11,"k":"百","m":"Hundred","on":[["ヒャク","hyaku"]],"kun":[],"s":["M16.13,20.23c2.22,0.54,6.29,0.75,8.51,0.54c21.49-2.02,41.86-4.39,59.22-4.98c3.7-0.12,5.92,0.26,7.77,0.53","M52.31,21.75c0.19,1.38,0.19,2.5-0.38,3.93c-1.65,4.19-4.81,9.19-8.66,14.68","M30.75,42.82c0.96,0.96,1.64,2.45,1.72,4.19c0.41,8.74,0.96,32.92,1.18,43.74c0.05,2.48,0.08,4.12,0.1,4.5","M33.55,44.8c10.35-1.37,35.73-4.38,38.78-4.59c3.15-0.22,4.92,1.17,4.92,4.24c0,4.48-0.68,32-0.92,44.06c-0.06,3.02-0.1,5.05-0.11,5.48","M34.14,66.95c10.24-1.08,32.11-3.2,41.44-3.57","M34.97,92.87c8.78-0.87,30.53-2.12,40.06-2.39"],"p":[[8.25,21.5],[42.5,28.63],[23.5,51.5],[33.5,41.5],[37.5,63.1],[37.5,89.5]]},{"n":12,"k":"千","m":"Thousand","on":[["セン","sen"]],"kun":[["ち","chi"]],"s":["M70.38,10.17c-0.13,1.58-0.83,2.64-2.17,3.67c-5.71,4.41-21.46,11.91-41.57,16.82","M12.13,50.83c3.36,0.94,7.21,0.75,10.63,0.49c17.76-1.34,37.63-4.16,66.24-4.94c3.08-0.08,6.08-0.14,9.13,0.38","M54.56,25.25c1.03,1.03,2.01,3,2.01,5.18c0,0.9-0.07,46.38-0.19,63.58c-0.02,2.93-0.04,5.04-0.06,5.99"],"p":[[61.75,8.13],[5.25,52.63],[48.5,35.5]]},{"n":13,"k":"万","m":"Ten thousand","on":[["マン","man"],["バン","ban"]],"kun":[],"s":["M14.38,24.73c2.3,0.54,6.52,0.78,8.81,0.54c21.57-2.27,44.44-5.64,64.9-5.98c3.83-0.06,6.12,0.26,8.04,0.53","M51,41.5c1.45,0.7,3.19,1.43,5.19,1.74c7.31,1.14,17.05,1.94,22.64,1.5c4.64-0.37,6.38,1.08,5.17,4.73C77.88,68,72.75,78.75,63.87,90.4c-7.6,9.97-10.12,3.22-12.62,0.2","M51.75,25.5c0.5,2,0.22,3.78-0.21,5.89C48.95,43.8,34.75,73.38,13.56,87.97"],"p":[[7.5,26.5],[57.5,41.5],[43.5,33.5]]},{"n":14,"k":"円","m":"Yen (currency of Japan); round","on":[["エン","en"]],"kun":[["まる(い)","maru(i)"]],"s":["M21.75,19.8c0.91,0.91,1.47,3.23,1.5,5.45c0.2,13.9,0.03,47.69,0.03,62.5c0,2-0.03,4.99-0.03,6","M24.06,21.56c15.07-1.68,49.46-5.58,57.92-6.31c2.9-0.25,4.78,1.88,4.78,4.27c0,13.48,0,53.21,0,67.48c0,9.75-4.25,6.5-8.5,1.5","M52.25,20.75c0.88,0.88,1.5,2,1.5,3.71c0,6.76,0,27.54,0,31.04","M24.75,59.75c14.62-1.75,43-4.25,60.5-5.25"],"p":[[16.5,28.63],[24.75,17.5],[45.5,29.5],[28.5,56.5]]},{"n":15,"k":"日","m":"Sun, day, Sunday","on":[["ニチ","nichi"],["ジツ","jitsu"]],"kun":[["ひ","hi"],["か","ka"]],"s":["M31.5,24.5c1.12,1.12,1.74,2.75,1.74,4.75c0,1.6-0.16,38.11-0.09,53.5c0.02,3.82,0.05,6.35,0.09,6.75","M33.48,26c0.8-0.05,37.67-3.01,40.77-3.25c3.19-0.25,5,1.75,5,4.25c0,4-0.22,40.84-0.23,56c0,3.48,0,5.72,0,6","M34.22,55.25c7.78-0.5,35.9-2.5,44.06-2.75","M34.23,86.5c10.52-0.75,34.15-2.12,43.81-2.25"],"p":[[25.25,32.63],[34.5,22.5],[37.5,51.5],[37.5,83.5]]}];
+
+
+const NS = 'http://www.w3.org/2000/svg';
+const N = 32;                       // points each stroke is resampled to
+const LENIENCY = { strict: 0.75, normal: 1, relaxed: 1.4 };
+const LEN_DESC = {
+  strict: 'Strokes have to sit close to the model',
+  normal: 'Forgiving, but order and direction still count',
+  relaxed: 'Loose on position; still checks order and direction',
+};
+const MODE_DESC = {
+  watch: 'See each kanji written stroke by stroke',
+  trace: 'Draw over a faint copy of the kanji',
+  recall: 'Meaning and readings only. Write it from memory',
+};
+const MODE_TAG = { watch: 'Watch', trace: 'Trace', recall: 'Recall' };
+const TOL_AVG = 12, TOL_END = 18;   // in KanjiVG's 109-unit space
+const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const STORE_KEY = 'kanjiStrokes.v2';
+
+const $ = id => document.getElementById(id);
+const board = $('board');
+const gGhost = $('g-ghost'), gDone = $('g-done'), gHint = $('g-hint'), gInk = $('g-ink'), gNums = $('g-nums');
+
+/* ---------- storage (best effort) ---------- */
+function load(key, fallback) { try { return JSON.parse(localStorage.getItem(key)) || fallback; } catch (e) { return fallback; } }
+function save(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {} }
+const scores = load(STORE_KEY, {});                     // keyed by card number
+const settings = Object.assign({ mode: 'watch', len: 'normal', romaji: true }, load(STORE_KEY + '.settings', {}));
+const saveSettings = () => save(STORE_KEY + '.settings', settings);
+
+/* ---------- geometry ---------- */
+const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+function polyLength(pts) { let L = 0; for (let i = 1; i < pts.length; i++) L += dist(pts[i - 1], pts[i]); return L; }
+
+function resample(pts, n) {
+  const total = polyLength(pts);
+  if (total === 0) return Array.from({ length: n }, () => pts[0].slice());
+  const step = total / (n - 1), out = [pts[0].slice()];
+  let acc = 0, i = 1, prev = pts[0];
+  while (out.length < n - 1 && i < pts.length) {
+    const seg = dist(prev, pts[i]);
+    if (acc + seg >= step) {
+      const t = (step - acc) / seg;
+      const p = [prev[0] + t * (pts[i][0] - prev[0]), prev[1] + t * (pts[i][1] - prev[1])];
+      out.push(p); prev = p; acc = 0;
+    } else { acc += seg; prev = pts[i]; i++; }
+  }
+  while (out.length < n) out.push(pts[pts.length - 1].slice());
+  return out;
+}
+
+// Sample every reference stroke once, using the browser's own path maths.
+const sampler = document.createElementNS(NS, 'svg');
+sampler.setAttribute('width', '0'); sampler.setAttribute('height', '0');
+sampler.style.position = 'absolute'; sampler.style.visibility = 'hidden';
+document.body.appendChild(sampler);
+KANJI.forEach(k => {
+  k.pts = k.s.map(d => {
+    const p = document.createElementNS(NS, 'path');
+    p.setAttribute('d', d); sampler.appendChild(p);
+    const L = p.getTotalLength(), arr = [];
+    for (let i = 0; i < N; i++) { const q = p.getPointAtLength(L * i / (N - 1)); arr.push([q.x, q.y]); }
+    p.remove();
+    return arr;
+  });
+});
+
+function judge(user, ref) {
+  const f = LENIENCY[settings.len];
+  let fwd = 0, rev = 0;
+  for (let i = 0; i < N; i++) { fwd += dist(user[i], ref[i]); rev += dist(user[i], ref[N - 1 - i]); }
+  fwd /= N; rev /= N;
+  if (fwd < TOL_AVG * f && dist(user[0], ref[0]) < TOL_END * f && dist(user[N - 1], ref[N - 1]) < TOL_END * f) return 'ok';
+  if (rev < TOL_AVG * f && dist(user[0], ref[N - 1]) < TOL_END * f && dist(user[N - 1], ref[0]) < TOL_END * f) return 'reversed';
+  return 'miss';
+}
+
+/* ---------- state ---------- */
+const state = { idx: 0, stroke: 0, misses: 0, strokeMisses: 0, complete: false, token: 0, drawing: null };
+const cur = () => KANJI[state.idx];
+
+/* ---------- small helpers ---------- */
+const clear = g => { while (g.firstChild) g.firstChild.remove(); };
+const wait = ms => new Promise(r => setTimeout(r, ms));
+const shortMeaning = m => m.split(/[;,]/)[0];
+function mkPath(d, cls, parent) {
+  const p = document.createElementNS(NS, 'path');
+  p.setAttribute('d', d); p.setAttribute('class', 'stroke ' + cls);
+  parent.appendChild(p); return p;
+}
+function mkNum(i, hl) {
+  const [x, y] = cur().p[i];
+  const t = document.createElementNS(NS, 'text');
+  t.setAttribute('x', x); t.setAttribute('y', y);
+  t.setAttribute('class', 'num' + (hl ? ' hl' : ''));
+  t.textContent = i + 1; gNums.appendChild(t); return t;
+}
+function animateStroke(p) {
+  const L = p.getTotalLength();
+  const ms = REDUCED ? 0 : Math.round(220 + L * 7);
+  p.style.strokeDasharray = L + ' ' + L;
+  p.style.strokeDashoffset = L;
+  p.getBoundingClientRect();
+  p.style.transition = 'stroke-dashoffset ' + ms + 'ms cubic-bezier(.45,.05,.55,.95)';
+  p.style.strokeDashoffset = 0;
+  return wait(ms + 60);
+}
+function btn(label, cls, id, fn) {
+  const b = document.createElement('button');
+  b.className = 'btn' + (cls ? ' ' + cls : ''); b.id = id; b.textContent = label; b.onclick = fn;
+  return b;
+}
+function feedback(msg, cls) { const f = $('feedback'); f.textContent = msg; f.className = 'feedback' + (cls ? ' ' + cls : ''); }
+
+/* ---------- screens ---------- */
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.toggle('visible', s.id === id));
+  $('gear').classList.toggle('active', id === 'screen-settings');
+  if (id !== 'screen-drill') state.token++;       // stop any running animation
+  window.scrollTo(0, 0);
+}
+
+function confClass(rec) {
+  if (!rec) return '';
+  const m = rec.last;
+  return m === 0 ? (rec.clean >= 2 ? 'c-pos3' : 'c-pos2') : m <= 2 ? 'c-pos1' : m <= 4 ? 'c-neg1' : 'c-neg2';
+}
+
+function renderHome() {
+  const first = KANJI[0].n, last = KANJI[KANJI.length - 1].n;
+  $('home-sub').textContent = KANJI.length + ' kanji. Tap one, or start the page from the top';
+  $('page-head').innerHTML = '<span>Page 1 · cards ' + first + '–' + last + '</span><span>recall results shade the tiles</span>';
+  document.querySelectorAll('#mode-pills .pill').forEach(b => b.classList.toggle('active', b.dataset.mode === settings.mode));
+  $('mode-desc').textContent = MODE_DESC[settings.mode];
+  const grid = $('grid'); clear(grid);
+  KANJI.forEach((k, i) => {
+    const t = document.createElement('button');
+    t.className = 'tile ' + confClass(scores[k.n]);
+    t.id = 'tile-' + k.n;
+    t.innerHTML = '<div class="tk"></div><div class="tm"></div>';
+    t.querySelector('.tk').textContent = k.k;
+    t.querySelector('.tm').textContent = shortMeaning(k.m);
+    t.onclick = () => openDrill(i);
+    grid.appendChild(t);
+  });
+}
+
+function setMode(m) { settings.mode = m; saveSettings(); }
+
+/* ---------- drill ---------- */
+function openDrill(i) { state.idx = i; show('screen-drill'); start(); }
+
+function renderReadings(el, list, cls) {
+  clear(el);
+  if (!list.length) { const s = document.createElement('span'); s.className = 'none'; s.textContent = 'none'; el.appendChild(s); return; }
+  list.forEach(([kana, rom]) => {
+    const s = document.createElement('span'); s.className = 'rd-item ' + cls; s.textContent = kana;
+    if (rom) { const sm = document.createElement('small'); sm.textContent = rom; s.appendChild(sm); }
+    el.appendChild(s);
+  });
+}
+
+function renderCard() {
+  const k = cur(), hide = settings.mode === 'recall' && !state.complete;
+  $('p-char').textContent = hide ? '？' : k.k;
+  $('p-char').classList.toggle('hidden-k', hide);
+  $('p-m').textContent = k.m;
+  $('p-strokes').textContent = k.s.length + (k.s.length === 1 ? ' stroke' : ' strokes') + ' · card ' + k.n;
+  renderReadings($('p-on'), k.on, 'on');
+  renderReadings($('p-kun'), k.kun, 'kun');
+  $('mode-tag').textContent = MODE_TAG[settings.mode];
+  document.body.classList.toggle('no-romaji', !settings.romaji);
+}
+
+function renderProgress() {
+  const total = cur().s.length;
+  $('prog').style.width = (state.stroke / total * 100) + '%';
+  $('prog-label').textContent = 'Card ' + (state.idx + 1) + ' of ' + KANJI.length + ' · stroke ' + state.stroke + '/' + total;
+}
+
+function renderControls() {
+  const c = $('controls'); clear(c);
+  const isLast = state.idx === KANJI.length - 1;
+  if (settings.mode === 'watch') {
+    c.append(btn('Replay', '', 'act-replay', start),
+             btn('Trace it', 'btn-primary', 'act-trace', () => { setMode('trace'); start(); }));
+  } else if (state.complete) {
+    const next = settings.mode === 'trace'
+      ? btn('Now from memory', 'btn-primary', 'act-next', () => { setMode('recall'); start(); })
+      : btn(isLast ? 'Back to cards' : 'Next kanji', 'btn-primary', 'act-next', isLast ? goHome : nextKanji);
+    c.append(btn('Again', '', 'act-again', start), next);
+  } else {
+    c.append(btn('Hint', 'btn-hint', 'act-hint', () => hint(true)),
+             btn('Start over', '', 'act-restart', start));
+  }
+}
+
+function nextKanji() { state.idx = Math.min(state.idx + 1, KANJI.length - 1); start(); }
+function goHome() { renderHome(); show('screen-home'); }
+
+async function start() {
+  const token = ++state.token;
+  state.stroke = 0; state.misses = 0; state.strokeMisses = 0; state.complete = false;
+  cancelInk();
+  [gGhost, gDone, gHint, gInk, gNums].forEach(clear);
+  renderCard(); renderProgress(); renderControls();
+  const k = cur();
+
+  if (settings.mode === 'trace') k.s.forEach(d => mkPath(d, 'ghost', gGhost));
+
+  if (settings.mode === 'watch') {
+    board.classList.add('locked');
+    feedback('Watch the order', 'info');
+    k.s.forEach(d => mkPath(d, 'ghost', gGhost));
+    await wait(REDUCED ? 0 : 350);
+    for (let i = 0; i < k.s.length; i++) {
+      if (token !== state.token) return;
+      const p = mkPath(k.s[i], 'done', gDone);
+      mkNum(i, true);
+      state.stroke = i + 1; renderProgress();
+      await animateStroke(p);
+      if (token !== state.token) return;
+      gNums.lastChild.setAttribute('class', 'num');
+    }
+    feedback('Replay it, or try tracing', '');
+  } else {
+    board.classList.remove('locked');
+    feedback(settings.mode === 'trace' ? 'Trace stroke 1 over the grey guide' : 'Write it from memory. Stroke 1', '');
+  }
+}
+
+async function hint(manual) {
+  if (settings.mode === 'watch' || state.complete) return;
+  const token = state.token, i = state.stroke;
+  if (manual) state.misses++;
+  clear(gHint);
+  const p = mkPath(cur().s[i], 'hint', gHint);
+  await animateStroke(p);
+  if (token !== state.token || state.stroke !== i) return;
+  p.setAttribute('class', 'stroke hint-faint');
+}
+
+function finish() {
+  state.complete = true;
+  board.classList.add('locked');
+  clear(gHint);
+  cur().s.forEach((_, i) => mkNum(i, false));
+  const m = state.misses;
+  if (settings.mode === 'recall') {
+    const n = cur().n, rec = scores[n] || { tries: 0, clean: 0 };
+    rec.tries++; if (m === 0) rec.clean++; rec.last = m;
+    scores[n] = rec; save(STORE_KEY, scores);
+  }
+  renderCard(); renderControls();
+  if (m === 0) feedback(settings.mode === 'recall' ? 'Clean from memory' : 'Traced with no mistakes', 'good');
+  else feedback('Done, with ' + m + (m === 1 ? ' mistake' : ' mistakes'), 'info');
+}
+
+function accept(i) {
+  const p = mkPath(cur().s[i], 'done fresh', gDone);
+  requestAnimationFrame(() => requestAnimationFrame(() => p.classList.remove('fresh')));
+  clear(gHint);
+  state.stroke = i + 1; state.strokeMisses = 0;
+  renderProgress();
+  if (state.stroke === cur().s.length) finish();
+  else feedback('Good. Stroke ' + (state.stroke + 1) + ' next', 'good');
+}
+
+function reject(path, msg) {
+  state.misses++; state.strokeMisses++;
+  path.setAttribute('class', 'stroke bad');
+  requestAnimationFrame(() => requestAnimationFrame(() => path.classList.add('fade')));
+  setTimeout(() => path.remove(), 700);
+  feedback(msg, 'bad-msg');
+  // Recall shows the stroke after two misses on it; trace already has the guide.
+  if (settings.mode === 'recall' && state.strokeMisses === 2) hint(false);
+}
+
+function evaluate(raw, path) {
+  const k = cur(), i = state.stroke;
+  if (polyLength(raw) < 3) { path.remove(); return; }
+  const user = resample(raw, N);
+  const verdict = judge(user, k.pts[i]);
+  if (verdict === 'ok') { path.remove(); accept(i); return; }
+  if (verdict === 'reversed') { reject(path, 'Right place, wrong direction'); return; }
+  for (let j = i + 1; j < k.pts.length; j++) {
+    if (judge(user, k.pts[j]) === 'ok') { reject(path, 'That is stroke ' + (j + 1) + '. Stroke ' + (i + 1) + ' comes first'); return; }
+  }
+  reject(path, 'Not quite. Try stroke ' + (i + 1) + ' again');
+}
+
+/* ---------- pointer input ---------- */
+function toSvg(e) {
+  const pt = board.createSVGPoint();
+  pt.x = e.clientX; pt.y = e.clientY;
+  const q = pt.matrixTransform(board.getScreenCTM().inverse());
+  return [q.x, q.y];
+}
+function cancelInk() { if (state.drawing) { state.drawing.path.remove(); state.drawing = null; } }
+const toD = pts => 'M' + pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join('L');
+
+board.addEventListener('pointerdown', e => {
+  if (settings.mode === 'watch' || state.complete || state.drawing) return;
+  e.preventDefault();
+  board.setPointerCapture(e.pointerId);
+  const pts = [toSvg(e)];
+  state.drawing = { id: e.pointerId, pts, path: mkPath(toD(pts), 'ink', gInk) };
+});
+board.addEventListener('pointermove', e => {
+  const d = state.drawing;
+  if (!d || e.pointerId !== d.id) return;
+  const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [];
+  (evs.length ? evs : [e]).forEach(ev => d.pts.push(toSvg(ev)));
+  d.path.setAttribute('d', toD(d.pts));
+});
+function endStroke(e) {
+  const d = state.drawing;
+  if (!d || e.pointerId !== d.id) return;
+  state.drawing = null;
+  if (e.type === 'pointercancel') { d.path.remove(); return; }
+  evaluate(d.pts, d.path);
+}
+board.addEventListener('pointerup', endStroke);
+board.addEventListener('pointercancel', endStroke);
+
+/* ---------- settings ---------- */
+function renderSettings() {
+  document.querySelectorAll('#len-pills .pill').forEach(b => b.classList.toggle('active', b.dataset.len === settings.len));
+  $('len-desc').textContent = LEN_DESC[settings.len];
+  $('set-romaji').classList.toggle('on', settings.romaji);
+}
+let returnTo = 'screen-home';
+$('gear').onclick = () => {
+  if ($('screen-settings').classList.contains('visible')) { closeSettings(); return; }
+  returnTo = $('screen-drill').classList.contains('visible') ? 'screen-drill' : 'screen-home';
+  renderSettings(); show('screen-settings');
+};
+function closeSettings() {
+  if (returnTo === 'screen-drill') { show('screen-drill'); start(); } else goHome();
+}
+$('settings-back').onclick = closeSettings;
+document.querySelectorAll('#len-pills .pill').forEach(b => b.onclick = () => { settings.len = b.dataset.len; saveSettings(); renderSettings(); });
+$('set-romaji').onclick = () => { settings.romaji = !settings.romaji; saveSettings(); renderSettings(); };
+
+/* ---------- wiring ---------- */
+document.querySelectorAll('#mode-pills .pill').forEach(b => b.onclick = () => { setMode(b.dataset.mode); renderHome(); });
+$('start-btn').onclick = () => openDrill(0);
+$('back-btn').onclick = goHome;
+
+renderHome();
+</script>
