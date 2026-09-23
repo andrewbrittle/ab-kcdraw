@@ -1,3 +1,12 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0f0f0f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Strokes">
 <title>Kanji Strokes</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -6,8 +15,8 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 
-  /* Tokens copied from kanji-cards. Dark is the base; light applies when the
-     viewer's system or theme choice asks for it. */
+  /* Tokens copied from kanji-cards. Dark is the default for everyone; the
+     light theme is opt-in from Settings, same as the other apps. */
   :root {
     color-scheme: dark;
     --bg: #0f0f0f; --surface: #1a1a1a; --surface2: #242424;
@@ -25,20 +34,6 @@
     --on-accent: #0f0f0f;
     --jp: 'BIZ UDPGothic', 'Hiragino Sans', 'Yu Gothic', 'Noto Sans JP', sans-serif;
   }
-  @media (prefers-color-scheme: light) {
-    :root:not([data-theme="dark"]) {
-      color-scheme: light;
-      --bg: #f7f5f0; --surface: #ffffff; --surface2: #efece4;
-      --border: rgba(0,0,0,0.10); --border-hover: rgba(0,0,0,0.20);
-      --text: #1a1a1a; --text-muted: rgba(26,26,26,0.66); --text-dim: rgba(26,26,26,0.45);
-      --accent: #a9740f; --accent-dim: rgba(169,116,15,0.12);
-      --green: #2f9e5c; --green-dim: rgba(47,158,92,0.12);
-      --red: #c53d3d; --red-dim: rgba(197,61,61,0.12);
-      --blue: #2f6fa8; --blue-dim: rgba(47,111,168,0.12);
-      --card-border: rgba(0,0,0,0.20);
-      --ghost: rgba(26,26,26,0.12); --guide: rgba(0,0,0,0.10); --on-accent: #ffffff;
-    }
-  }
   :root[data-theme="light"] {
     color-scheme: light;
     --bg: #f7f5f0; --surface: #ffffff; --surface2: #efece4;
@@ -49,7 +44,7 @@
     --red: #c53d3d; --red-dim: rgba(197,61,61,0.12);
     --blue: #2f6fa8; --blue-dim: rgba(47,111,168,0.12);
     --card-border: rgba(0,0,0,0.20);
-    --ghost: rgba(26,26,26,0.12); --guide: rgba(0,0,0,0.10); --on-accent: #ffffff;
+    --ghost: rgba(26,26,26,0.12); --guide: rgba(0,0,0,0.10);
   }
 
   body {
@@ -190,7 +185,8 @@
     .done, .bad, .progress-fill, .toggle::after { transition: none; }
   }
 </style>
-
+</head>
+<body>
 <header>
   <div class="app-heading"><span>漢字</span> strokes</div>
   <button class="icon-btn" id="gear" title="Settings" aria-label="Settings">⚙</button>
@@ -256,6 +252,7 @@
         <button class="pill" data-len="relaxed" id="len-relaxed">Relaxed</button>
       </div>
     </div>
+    <button class="setting" id="set-theme"><div><div class="n">Light theme</div><div class="d">Switches from the default dark look</div></div><div class="toggle"></div></button>
     <button class="setting" id="set-romaji"><div><div class="n">Show romaji</div><div class="d">Romaji next to the readings</div></div><div class="toggle"></div></button>
     <button class="btn" id="settings-back">← Back</button>
     <p class="credit">Stroke order data from <a href="https://kanjivg.tagaini.net/" target="_blank" rel="noopener">KanjiVG</a> © Ulrich Apel, CC BY-SA 3.0.</p>
@@ -292,8 +289,11 @@ const gGhost = $('g-ghost'), gDone = $('g-done'), gHint = $('g-hint'), gInk = $(
 function load(key, fallback) { try { return JSON.parse(localStorage.getItem(key)) || fallback; } catch (e) { return fallback; } }
 function save(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {} }
 const scores = load(STORE_KEY, {});                     // keyed by card number
-const settings = Object.assign({ mode: 'watch', len: 'normal', romaji: true }, load(STORE_KEY + '.settings', {}));
+const settings = Object.assign({ mode: 'watch', len: 'normal', romaji: true, light: false }, load(STORE_KEY + '.settings', {}));
 const saveSettings = () => save(STORE_KEY + '.settings', settings);
+// Always set explicitly, so the page stays dark unless Light theme is switched on.
+function applyTheme() { document.documentElement.setAttribute('data-theme', settings.light ? 'light' : 'dark'); }
+applyTheme();
 
 /* ---------- geometry ---------- */
 const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
@@ -595,6 +595,7 @@ function renderSettings() {
   document.querySelectorAll('#len-pills .pill').forEach(b => b.classList.toggle('active', b.dataset.len === settings.len));
   $('len-desc').textContent = LEN_DESC[settings.len];
   $('set-romaji').classList.toggle('on', settings.romaji);
+  $('set-theme').classList.toggle('on', settings.light);
 }
 let returnTo = 'screen-home';
 $('gear').onclick = () => {
@@ -607,6 +608,7 @@ function closeSettings() {
 }
 $('settings-back').onclick = closeSettings;
 document.querySelectorAll('#len-pills .pill').forEach(b => b.onclick = () => { settings.len = b.dataset.len; saveSettings(); renderSettings(); });
+$('set-theme').onclick = () => { settings.light = !settings.light; saveSettings(); applyTheme(); renderSettings(); };
 $('set-romaji').onclick = () => { settings.romaji = !settings.romaji; saveSettings(); renderSettings(); };
 
 /* ---------- wiring ---------- */
@@ -616,3 +618,5 @@ $('back-btn').onclick = goHome;
 
 renderHome();
 </script>
+</body>
+</html>
