@@ -79,6 +79,8 @@
     cursor: pointer; font-family: inherit; white-space: nowrap;
   }
   .pill.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+  .section-label { font-size: 12px; font-weight: 700; color: var(--text-dim); text-align: center; margin-bottom: -0.5rem; }
+  .step-pills .pill { padding: 5px 16px; }
   .mode-desc { font-size: 12px; color: var(--text-dim); text-align: center; min-height: 15px; }
 
   .page-head {
@@ -122,12 +124,7 @@
     border-radius: var(--radius-lg); padding: 1.25rem 1.25rem 1.25rem;
     display: flex; flex-direction: column; gap: 0.75rem;
   }
-  .mode-tag {
-    position: absolute; top: 12px; right: 12px;
-    font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 99px;
-    color: var(--accent); border: 1px solid var(--accent); background: var(--accent-dim);
-  }
-  .back-head { display: flex; align-items: center; gap: 1rem; padding-right: 4.5rem; }
+  .back-head { display: flex; align-items: center; gap: 1rem; }
   .k-mid { font-family: var(--jp); font-size: 56px; line-height: 1; min-width: 56px; text-align: center; }
   .k-mid.hidden-k { color: var(--text-dim); }
   .back-head .m { font-size: 18px; font-weight: 700; }
@@ -197,6 +194,7 @@
   <div class="screen visible" id="screen-home">
     <div class="title">Kanji Strokes</div>
     <div class="sub" id="home-sub"></div>
+    <div class="section-label">Start each kanji at</div>
     <div class="pill-row" id="mode-pills">
       <button class="pill" data-mode="watch" id="mode-watch">Watch</button>
       <button class="pill" data-mode="trace" id="mode-trace">Trace</button>
@@ -214,8 +212,12 @@
       <div class="progress-bg"><div class="progress-fill" id="prog" style="width:0%"></div></div>
       <div class="progress-label" id="prog-label"></div>
     </div>
+    <div class="pill-row step-pills" id="step-pills">
+      <button class="pill" data-step="watch" id="step-watch">Watch</button>
+      <button class="pill" data-step="trace" id="step-trace">Trace</button>
+      <button class="pill" data-step="recall" id="step-recall">Recall</button>
+    </div>
     <div class="card">
-      <span class="mode-tag" id="mode-tag"></span>
       <div class="back-head">
         <div class="k-mid" id="p-char"></div>
         <div>
@@ -272,11 +274,10 @@ const LEN_DESC = {
   relaxed: 'Loose on position; still checks order and direction',
 };
 const MODE_DESC = {
-  watch: 'See each kanji written stroke by stroke',
-  trace: 'Draw over a faint copy of the kanji',
-  recall: 'Meaning and readings only. Write it from memory',
+  watch: 'Watch it drawn, then trace it, then write it from memory',
+  trace: 'Trace it, then write it from memory',
+  recall: 'Straight to writing from memory. Good for review',
 };
-const MODE_TAG = { watch: 'Watch', trace: 'Trace', recall: 'Recall' };
 const TOL_AVG = 12, TOL_END = 18;   // in KanjiVG's 109-unit space
 const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const STORE_KEY = 'kanjiStrokes.v2';
@@ -290,6 +291,9 @@ function load(key, fallback) { try { return JSON.parse(localStorage.getItem(key)
 function save(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {} }
 const scores = load(STORE_KEY, {});                     // keyed by card number
 const settings = Object.assign({ mode: 'watch', len: 'normal', romaji: true, light: false }, load(STORE_KEY + '.settings', {}));
+// Earlier builds saved the drill's last step as the home choice, which could
+// leave it stuck on Recall. Reset that once.
+if (settings.v !== 2) { settings.mode = 'watch'; settings.v = 2; }
 const saveSettings = () => save(STORE_KEY + '.settings', settings);
 // Always set explicitly, so the page stays dark unless Light theme is switched on.
 function applyTheme() { document.documentElement.setAttribute('data-theme', settings.light ? 'light' : 'dark'); }
@@ -343,7 +347,7 @@ function judge(user, ref) {
 }
 
 /* ---------- state ---------- */
-const state = { idx: 0, stroke: 0, misses: 0, strokeMisses: 0, complete: false, token: 0, drawing: null };
+const state = { mode: 'watch', idx: 0, stroke: 0, misses: 0, strokeMisses: 0, complete: false, token: 0, drawing: null };
 const cur = () => KANJI[state.idx];
 
 /* ---------- small helpers ---------- */
@@ -415,7 +419,9 @@ function renderHome() {
 function setMode(m) { settings.mode = m; saveSettings(); }
 
 /* ---------- drill ---------- */
-function openDrill(i) { state.idx = i; show('screen-drill'); start(); }
+// Each kanji begins at the starting step chosen on the home screen.
+function openDrill(i) { state.idx = i; state.mode = settings.mode; show('screen-drill'); start(); }
+function goStep(m) { state.mode = m; start(); }
 
 function renderReadings(el, list, cls) {
   clear(el);
@@ -428,14 +434,14 @@ function renderReadings(el, list, cls) {
 }
 
 function renderCard() {
-  const k = cur(), hide = settings.mode === 'recall' && !state.complete;
+  const k = cur(), hide = state.mode === 'recall' && !state.complete;
   $('p-char').textContent = hide ? '？' : k.k;
   $('p-char').classList.toggle('hidden-k', hide);
   $('p-m').textContent = k.m;
   $('p-strokes').textContent = k.s.length + (k.s.length === 1 ? ' stroke' : ' strokes') + ' · card ' + k.n;
   renderReadings($('p-on'), k.on, 'on');
   renderReadings($('p-kun'), k.kun, 'kun');
-  $('mode-tag').textContent = MODE_TAG[settings.mode];
+  document.querySelectorAll('#step-pills .pill').forEach(b => b.classList.toggle('active', b.dataset.step === state.mode));
   document.body.classList.toggle('no-romaji', !settings.romaji);
 }
 
@@ -448,12 +454,12 @@ function renderProgress() {
 function renderControls() {
   const c = $('controls'); clear(c);
   const isLast = state.idx === KANJI.length - 1;
-  if (settings.mode === 'watch') {
+  if (state.mode === 'watch') {
     c.append(btn('Replay', '', 'act-replay', start),
-             btn('Trace it', 'btn-primary', 'act-trace', () => { setMode('trace'); start(); }));
+             btn('Trace it', 'btn-primary', 'act-trace', () => goStep('trace')));
   } else if (state.complete) {
-    const next = settings.mode === 'trace'
-      ? btn('Now from memory', 'btn-primary', 'act-next', () => { setMode('recall'); start(); })
+    const next = state.mode === 'trace'
+      ? btn('Now from memory', 'btn-primary', 'act-next', () => goStep('recall'))
       : btn(isLast ? 'Back to cards' : 'Next kanji', 'btn-primary', 'act-next', isLast ? goHome : nextKanji);
     c.append(btn('Again', '', 'act-again', start), next);
   } else {
@@ -462,7 +468,7 @@ function renderControls() {
   }
 }
 
-function nextKanji() { state.idx = Math.min(state.idx + 1, KANJI.length - 1); start(); }
+function nextKanji() { state.idx = Math.min(state.idx + 1, KANJI.length - 1); state.mode = settings.mode; start(); }
 function goHome() { renderHome(); show('screen-home'); }
 
 async function start() {
@@ -473,9 +479,9 @@ async function start() {
   renderCard(); renderProgress(); renderControls();
   const k = cur();
 
-  if (settings.mode === 'trace') k.s.forEach(d => mkPath(d, 'ghost', gGhost));
+  if (state.mode === 'trace') k.s.forEach(d => mkPath(d, 'ghost', gGhost));
 
-  if (settings.mode === 'watch') {
+  if (state.mode === 'watch') {
     board.classList.add('locked');
     feedback('Watch the order', 'info');
     k.s.forEach(d => mkPath(d, 'ghost', gGhost));
@@ -492,12 +498,12 @@ async function start() {
     feedback('Replay it, or try tracing', '');
   } else {
     board.classList.remove('locked');
-    feedback(settings.mode === 'trace' ? 'Trace stroke 1 over the grey guide' : 'Write it from memory. Stroke 1', '');
+    feedback(state.mode === 'trace' ? 'Trace stroke 1 over the grey guide' : 'Write it from memory. Stroke 1', '');
   }
 }
 
 async function hint(manual) {
-  if (settings.mode === 'watch' || state.complete) return;
+  if (state.mode === 'watch' || state.complete) return;
   const token = state.token, i = state.stroke;
   if (manual) state.misses++;
   clear(gHint);
@@ -513,13 +519,13 @@ function finish() {
   clear(gHint);
   cur().s.forEach((_, i) => mkNum(i, false));
   const m = state.misses;
-  if (settings.mode === 'recall') {
+  if (state.mode === 'recall') {
     const n = cur().n, rec = scores[n] || { tries: 0, clean: 0 };
     rec.tries++; if (m === 0) rec.clean++; rec.last = m;
     scores[n] = rec; save(STORE_KEY, scores);
   }
   renderCard(); renderControls();
-  if (m === 0) feedback(settings.mode === 'recall' ? 'Clean from memory' : 'Traced with no mistakes', 'good');
+  if (m === 0) feedback(state.mode === 'recall' ? 'Clean from memory' : 'Traced with no mistakes', 'good');
   else feedback('Done, with ' + m + (m === 1 ? ' mistake' : ' mistakes'), 'info');
 }
 
@@ -540,7 +546,7 @@ function reject(path, msg) {
   setTimeout(() => path.remove(), 700);
   feedback(msg, 'bad-msg');
   // Recall shows the stroke after two misses on it; trace already has the guide.
-  if (settings.mode === 'recall' && state.strokeMisses === 2) hint(false);
+  if (state.mode === 'recall' && state.strokeMisses === 2) hint(false);
 }
 
 function evaluate(raw, path) {
@@ -567,7 +573,7 @@ function cancelInk() { if (state.drawing) { state.drawing.path.remove(); state.d
 const toD = pts => 'M' + pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join('L');
 
 board.addEventListener('pointerdown', e => {
-  if (settings.mode === 'watch' || state.complete || state.drawing) return;
+  if (state.mode === 'watch' || state.complete || state.drawing) return;
   e.preventDefault();
   board.setPointerCapture(e.pointerId);
   const pts = [toSvg(e)];
@@ -615,6 +621,7 @@ $('set-romaji').onclick = () => { settings.romaji = !settings.romaji; saveSettin
 document.querySelectorAll('#mode-pills .pill').forEach(b => b.onclick = () => { setMode(b.dataset.mode); renderHome(); });
 $('start-btn').onclick = () => openDrill(0);
 $('back-btn').onclick = goHome;
+document.querySelectorAll('#step-pills .pill').forEach(b => b.onclick = () => goStep(b.dataset.step));
 
 renderHome();
 </script>
