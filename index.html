@@ -35,8 +35,17 @@
     --red: #eb5757; --red-dim: rgba(235,87,87,0.12);
     --blue: #7eb8f7; --blue-dim: rgba(126,184,247,0.12);
     --radius: 10px; --radius-lg: 16px;
-    --conf-neg2: rgba(235,87,87,0.30); --conf-neg1: rgba(235,87,87,0.15);
-    --conf-pos1: rgba(111,207,151,0.15); --conf-pos2: rgba(111,207,151,0.30); --conf-pos3: rgba(111,207,151,0.45);
+    /* Confidence colours: same values as kanji-cards. Muted for tiles, bolder for the bar. */
+    --conf-neg3: rgba(235,87,87,0.45); --conf-neg2: rgba(235,87,87,0.30); --conf-neg1: rgba(235,87,87,0.15);
+    --conf-neutral: rgba(126,184,247,0.14);
+    --conf-pos1: rgba(111,207,151,0.15); --conf-pos2: rgba(111,207,151,0.30);
+    --conf-pos3: rgba(111,207,151,0.45); --conf-pos4: rgba(111,207,151,0.60);
+    --conf-untested: rgba(255,255,255,0.22);
+    --conf-neg3-bar: rgba(235,87,87,0.92); --conf-neg2-bar: rgba(235,87,87,0.68); --conf-neg1-bar: rgba(235,87,87,0.42);
+    --conf-neutral-bar: rgba(126,184,247,0.55);
+    --conf-pos1-bar: rgba(111,207,151,0.42); --conf-pos2-bar: rgba(111,207,151,0.65);
+    --conf-pos3-bar: rgba(111,207,151,0.85); --conf-pos4-bar: #6fcf97;
+    --conf-untested-bar: rgba(255,255,255,0.38);
     --card-border: rgba(255,255,255,0.22);
     --ghost: rgba(248,246,242,0.13); --guide: rgba(255,255,255,0.10);
     --on-accent: #0f0f0f;
@@ -53,6 +62,12 @@
     --blue: #2f6fa8; --blue-dim: rgba(47,111,168,0.12);
     --card-border: rgba(0,0,0,0.20);
     --ghost: rgba(26,26,26,0.12); --guide: rgba(0,0,0,0.10);
+    --conf-untested: rgba(0,0,0,0.16);
+    --conf-neg3-bar: rgba(197,61,61,0.88); --conf-neg2-bar: rgba(197,61,61,0.62); --conf-neg1-bar: rgba(197,61,61,0.38);
+    --conf-neutral-bar: rgba(47,111,168,0.50);
+    --conf-pos1-bar: rgba(47,158,92,0.38); --conf-pos2-bar: rgba(47,158,92,0.60);
+    --conf-pos3-bar: rgba(47,158,92,0.80); --conf-pos4-bar: #2f9e5c;
+    --conf-untested-bar: rgba(0,0,0,0.30);
   }
 
   body {
@@ -143,12 +158,25 @@
   .fam-pill { font-family: var(--jp); }
   .fam-pill .fam-k { font-size: 16px; color: var(--text); margin-right: 5px; }
   .fam-pill .fam-n { font-family: -apple-system, sans-serif; font-size: 11px; color: var(--text-dim); margin-left: 4px; }
-  .tile.selected { border-color: var(--accent); background: var(--accent-dim); box-shadow: inset 0 0 0 2px var(--accent); }
+  .tile.selected, .tile.selected[class*="c-"] { border-color: var(--accent); background: var(--accent-dim); box-shadow: inset 0 0 0 2px var(--accent); }
   .tile .tk { font-family: var(--jp); font-size: 26px; line-height: 1.1; }
   .tile .tm { font-size: 10px; color: var(--text-muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 2px; }
-  .tile.c-neg2 { background: var(--conf-neg2); } .tile.c-neg1 { background: var(--conf-neg1); }
-  .tile.c-pos1 { background: var(--conf-pos1); } .tile.c-pos2 { background: var(--conf-pos2); }
-  .tile.c-pos3 { background: var(--conf-pos3); }
+  .tile.c-neg3, .kana-ref-card.c-neg3 { background: var(--conf-neg3); }
+  .tile.c-neg2, .kana-ref-card.c-neg2 { background: var(--conf-neg2); }
+  .tile.c-neg1, .kana-ref-card.c-neg1 { background: var(--conf-neg1); }
+  .tile.c-neutral, .kana-ref-card.c-neutral { background: var(--conf-neutral); }
+  .tile.c-pos1, .kana-ref-card.c-pos1 { background: var(--conf-pos1); }
+  .tile.c-pos2, .kana-ref-card.c-pos2 { background: var(--conf-pos2); }
+  .tile.c-pos3, .kana-ref-card.c-pos3 { background: var(--conf-pos3); }
+  .tile.c-pos4, .kana-ref-card.c-pos4 { background: var(--conf-pos4); }
+  /* Progress bar, as kanji-cards: tap to include or hide untested. */
+  .progress-block { display: flex; flex-direction: column; gap: 6px; }
+  .conf-bar { display: flex; height: 22px; border-radius: 99px; overflow: hidden; border: 1px solid var(--border);
+    background: var(--surface2); cursor: pointer; padding: 0; width: 100%; }
+  .conf-bar .seg { height: 100%; min-width: 2px; }
+  .progress-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; justify-content: center; font-size: 11.5px; color: var(--text-muted); }
+  .progress-legend .leg-item { display: flex; align-items: center; gap: 4px; }
+  .progress-legend .leg-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 
   /* Kana chart rows, as in the Japanese Drill app: tap a row to select it. */
   /* Kana chart: tap a character to pick it, or the row label for the whole row.
@@ -168,7 +196,7 @@
     cursor: pointer; font-family: inherit; color: var(--text);
   }
   .kana-ref-card:hover { border-color: var(--border-hover); }
-  .kana-ref-card.selected { border-color: var(--accent); background: var(--accent-dim); box-shadow: inset 0 0 0 2px var(--accent); }
+  .kana-ref-card.selected, .kana-ref-card.selected[class*="c-"] { border-color: var(--accent); background: var(--accent-dim); box-shadow: inset 0 0 0 2px var(--accent); }
   .kana-ref-card.empty { background: transparent; border-color: transparent; cursor: default; }
   .kana-ref-char { font-family: var(--jp); font-size: 28px; font-weight: 600; color: var(--text); line-height: 1; }
   .kana-ref-rom { font-size: 11px; font-weight: 600; color: var(--text-muted); }
@@ -288,6 +316,10 @@
   <div class="screen visible" id="screen-home">
     <div class="title" id="home-title"></div>
     <div class="sub" id="home-sub"></div>
+    <div class="progress-block" id="progress-block">
+      <button class="conf-bar" id="conf-bar" aria-label="Confidence. Tap to include or hide untested"></button>
+      <div class="progress-legend" id="conf-legend"></div>
+    </div>
 
     <div class="stack" id="kana-select">
       <button class="group-card emphasis" id="select-all"><span class="group-name" id="select-all-label"></span><span class="group-arrow">→</span></button>
@@ -388,7 +420,7 @@
     
     <button class="setting" id="set-romaji"><div><div class="n">Show romaji</div><div class="d">Romaji next to the readings</div></div><div class="toggle"></div></button>
     <button class="btn" id="settings-back">← Back</button>
-    <div class="credit" style="font-weight:600;">v260924.003</div>
+    <div class="credit" style="font-weight:600;">v260924.006</div>
     <p class="credit">Stroke order data from <a href="https://kanjivg.tagaini.net/" target="_blank" rel="noopener">KanjiVG</a> © Ulrich Apel, CC BY-SA 3.0.</p>
   </div>
 </main>
@@ -422,27 +454,65 @@ const gGhost = $('g-ghost'), gDone = $('g-done'), gHint = $('g-hint'), gInk = $(
 /* ---------- storage (best effort) ---------- */
 function load(key, fallback) { try { return JSON.parse(localStorage.getItem(key)) || fallback; } catch (e) { return fallback; } }
 function save(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {} }
-/* ---------- scoring (recorded, not shown yet) ----------
-   Only COLD recall counts towards a score: Recall on a kanji you haven't just
-   watched or traced in this visit. Recall straight after Watch/Trace, or a
-   second go after finishing, is logged as warm practice and ignored.
-   Mistakes are kept by type so they can be weighted later. Order, direction
-   and hints are memory errors; shape misses are mostly drawing, so they
-   count for little.
-   Stored per character id (kanji card number, or h:/k: plus the kana): { cold: {tries, clean}, log: [last 20 attempts] }. */
+/* ---------- attempt log ----------
+   Every Recall is logged per character id (kanji card number, or h:/k: plus
+   the kana): { cold: {tries, clean}, log: [last 20 attempts] }. The log is
+   the raw evidence; the confidence score below is built from it. */
 const SCORE_KEY = 'kanjiStrokes.scores.v1';
-const SCORE_WEIGHTS = { order: 1, dir: 1, hint: 1, shape: 0.25 };
 const LOG_MAX = 20;
 const scores = load(SCORE_KEY, {});
-function memoryErrors(e) { return e.order * SCORE_WEIGHTS.order + e.dir * SCORE_WEIGHTS.dir + e.hint * SCORE_WEIGHTS.hint + e.shape * SCORE_WEIGHTS.shape; }
-function recordAttempt(n, e, cold) {
-  const rec = scores[n] || { cold: { tries: 0, clean: 0 }, log: [] };
+function logAttempt(id, e, cold) {
+  const rec = scores[id] || { cold: { tries: 0, clean: 0 }, log: [] };
   rec.log.push({ t: Date.now(), cold, order: e.order, dir: e.dir, shape: e.shape, hint: e.hint });
   if (rec.log.length > LOG_MAX) rec.log = rec.log.slice(-LOG_MAX);
   if (cold) { rec.cold.tries++; if (e.order + e.dir + e.hint === 0) rec.cold.clean++; }
-  scores[n] = rec; save(SCORE_KEY, scores);
+  scores[id] = rec; save(SCORE_KEY, scores);
 }
-const settings = Object.assign({ set: 'hira', picked: { hira: [], kata: [] }, kview: 'order', mode: 'watch', len: 'normal', romaji: true, light: false, offline: false }, load(STORE_KEY + '.settings', {}));
+
+/* ---------- confidence score ----------
+   Same model as kanji-cards and the drill app: one score per character,
+   -2..+2, positive scores fade with a 50-day half-life, negative ones stay
+   put, 8 colour bands. No entry = untested, a separate state.
+   Strokes' own rule for turning a Recall into a change:
+     start at +0.5 for a cold recall (straight to Recall) or +0.25 warm
+     (after Watch/Trace), minus 0.1 per wrong order, wrong direction or hint
+     (including the automatic hint), minus 0.05 per redraw (mostly drawing,
+     not memory), never below -0.75 for one attempt.
+   Only the first Recall of a character in each practice run counts. */
+const CONF_KEY = 'kanjiStrokes.confidence.v1';
+const BASE = { cold: 0.5, warm: 0.25 };
+const COST = { order: 0.1, dir: 0.1, hint: 0.1, shape: 0.05 };
+const FLOOR = -0.75;
+const DECAY_HALF_LIFE_DAYS = 50;
+const conf = load(CONF_KEY, {});
+const round2 = x => Math.round(x * 100) / 100;
+function attemptDelta(e, cold) {
+  const d = (cold ? BASE.cold : BASE.warm) - (e.order * COST.order + e.dir * COST.dir + e.hint * COST.hint + e.shape * COST.shape);
+  return round2(Math.max(FLOOR, d));
+}
+function applyDelta(id, delta, when) {
+  const cur = conf[id] ? conf[id].score : 0;
+  conf[id] = { score: round2(Math.max(-2, Math.min(2, cur + delta))), lastSeen: when || Date.now() };
+}
+function decayedScore(entry) {
+  if (!entry) return entry;
+  if (entry.score <= 0 || !entry.lastSeen) return entry.score;
+  const days = (Date.now() - entry.lastSeen) / 86400000;
+  return days <= 0 ? entry.score : entry.score * Math.pow(2, -days / DECAY_HALF_LIFE_DAYS);
+}
+function confidenceBand(score) {
+  if (score === undefined || score === null) return '';
+  if (score <= -1.75) return 'neg3';
+  if (score <= -1.125) return 'neg2';
+  if (score <= -0.375) return 'neg1';
+  if (score < 0.25) return 'neutral';
+  if (score < 0.75) return 'pos1';
+  if (score < 1.25) return 'pos2';
+  if (score < 1.75) return 'pos3';
+  return 'pos4';
+}
+const bandClass = id => { const b = confidenceBand(decayedScore(conf[id])); return b ? ' c-' + b : ''; };
+const settings = Object.assign({ showUntestedBar: false, set: 'hira', picked: { hira: [], kata: [] }, kview: 'order', mode: 'watch', len: 'normal', romaji: true, light: false, offline: false }, load(STORE_KEY + '.settings', {}));
 // Earlier builds saved the drill's last step as the home choice, which could
 // leave it stuck on Recall. Reset that once.
 if (settings.v !== 2) { settings.mode = 'watch'; settings.v = 2; }
@@ -503,8 +573,24 @@ function judge(user, ref) {
   return 'miss';
 }
 
+// One-off: turn attempts logged before scoring existed into confidence, in
+// time order, with the same rule. Then drop scores for ids no longer in the
+// list (e.g. 々, removed from the master list).
+(function initConfidence() {
+  const valid = new Set(); SETS.forEach(s => s.items.forEach(k => valid.add(k.id)));
+  if (!settings.confMigrated) {
+    const all = [];
+    Object.entries(scores).forEach(([id, rec]) => (rec.log || []).forEach(a => all.push([id, a])));
+    all.sort((x, y) => x[1].t - y[1].t);
+    all.forEach(([id, a]) => { if (valid.has(id)) applyDelta(id, attemptDelta(a, a.cold), a.t); });
+    settings.confMigrated = true; saveSettings();
+  }
+  Object.keys(conf).forEach(id => { if (!valid.has(id)) delete conf[id]; });
+  save(CONF_KEY, conf);
+})();
+
 /* ---------- state ---------- */
-const state = { mode: 'watch', idx: 0, stroke: 0, errs: null, warm: false, strokeMisses: 0, complete: false, token: 0, drawing: null };
+const state = { scoredRun: new Set(), mode: 'watch', idx: 0, stroke: 0, errs: null, warm: false, strokeMisses: 0, complete: false, token: 0, drawing: null };
 // The drill works through state.list: the selected kana rows, or a kanji page.
 state.list = [];
 const kanaSet = id => SETS.find(s => s.id === id);
@@ -615,7 +701,34 @@ function renderHome() {
   if (isKana) renderKanaHome(kanaSet(settings.set)); else renderKanjiHome();
 }
 
+const BAR_ORDER = ['untested', 'neg3', 'neg2', 'neg1', 'neutral', 'pos1', 'pos2', 'pos3', 'pos4'];
+const LEGEND = [['Untested', ['untested'], 'untested'], ['Struggling', ['neg3', 'neg2', 'neg1'], 'neg2'],
+                ['Building', ['neutral', 'pos1', 'pos2'], 'pos1'], ['Confident', ['pos3', 'pos4'], 'pos4']];
+function renderProgressBar(items) {
+  const counts = {}; BAR_ORDER.forEach(b => { counts[b] = 0; });
+  items.forEach(k => { const e = conf[k.id]; counts[e ? confidenceBand(decayedScore(e)) : 'untested']++; });
+  const tested = items.length - counts.untested;
+  const showUntested = settings.showUntestedBar || tested === 0;
+  const total = showUntested ? items.length : tested;
+  const bar = $('conf-bar'); clear(bar);
+  BAR_ORDER.forEach(b => {
+    if (!counts[b] || (b === 'untested' && !showUntested)) return;
+    const s = document.createElement('div'); s.className = 'seg';
+    s.style.width = (counts[b] / total * 100) + '%'; s.style.background = 'var(--conf-' + b + '-bar)';
+    bar.appendChild(s);
+  });
+  const leg = $('conf-legend'); clear(leg);
+  LEGEND.forEach(([name, bands, colour]) => {
+    const n = bands.reduce((a, b) => a + counts[b], 0);
+    const it = document.createElement('span'); it.className = 'leg-item';
+    it.innerHTML = '<span class="leg-dot" style="background:var(--conf-' + colour + '-bar)"></span><span></span>';
+    it.lastChild.textContent = name + ' ' + n; leg.appendChild(it);
+  });
+}
+
 function renderKanaHome(set) {
+  $('home-sub').after($('progress-block'));   // no search on the kana screens
+  renderProgressBar(set.items);
   $('home-title').textContent = set.label;
   $('home-sub').textContent = 'Tap characters to pick them, or a row label for the whole row.';
   const chosen = new Set(settings.picked[set.id] = settings.picked[set.id] || []);
@@ -636,7 +749,7 @@ function renderKanaHome(set) {
       if (i === null) { const c = document.createElement('div'); c.className = 'kana-ref-card empty'; el.appendChild(c); return; }
       const k = set.items[i];
       const c = document.createElement('button');
-      c.className = 'kana-ref-card' + (chosen.has(k.id) ? ' selected' : ''); c.id = 'kana-' + i;
+      c.className = 'kana-ref-card' + bandClass(k.id) + (chosen.has(k.id) ? ' selected' : ''); c.id = 'kana-' + i;
       c.innerHTML = '<span class="kana-ref-char"></span><span class="kana-ref-rom"></span>';
       c.firstChild.textContent = k.k; c.lastChild.textContent = k.m;
       c.onclick = () => { chosen.has(k.id) ? chosen.delete(k.id) : chosen.add(k.id); store(); };
@@ -669,6 +782,9 @@ const KVIEW_DESC = {
   jlpt: 'Grouped by JLPT level, from N5 (easiest) to N1',
 };
 function renderKanjiHome() {
+  // As in kanji-cards: the confidence bar sits under the search box.
+  $('kanji-search-message').after($('progress-block'));
+  renderProgressBar(kanjiPages().flatMap(p => p.items));
   $('home-title').textContent = 'Kanji';
   $('home-sub').textContent = SETS.filter(s => s.type === 'kanji').reduce((a, s) => a + s.items.length, 0) + ' kanji, the same list as your cards.';
   document.querySelectorAll('#kview-pills .pill').forEach(b => b.classList.toggle('active', b.dataset.kview === settings.kview));
@@ -711,9 +827,8 @@ function renderKSelect() {
     tiles.className = 'tile-grid';
     page.items.forEach(k => {
       const t = document.createElement('button');
-      t.className = 'tile' + (kSel.has(k.id) ? ' selected' : ''); t.id = 'tile-' + k.id;
-      t.innerHTML = '<div class="tk"></div><div class="tm"></div>' + (k.j ? '<div class="tj' + (k.j === 'N1' || k.j === 'N2' ? ' hi' : '') + '"></div>' : '');
-      if (k.j) t.querySelector('.tj').textContent = k.j;
+      t.className = 'tile' + bandClass(k.id) + (kSel.has(k.id) ? ' selected' : ''); t.id = 'tile-' + k.id;
+      t.innerHTML = '<div class="tk"></div><div class="tm"></div>';
       t.querySelector('.tk').textContent = k.k;
       t.querySelector('.tm').textContent = shortMeaning(k.m);
       t.onclick = () => { kSel.has(k.id) ? kSel.delete(k.id) : kSel.add(k.id); renderKSelect(); };
@@ -741,7 +856,7 @@ function partStrokes() {
   return new Set((k.q && k.q[state.part]) || []);
 }
 const partCls = i => partStrokes().has(i) ? ' part' : '';
-function openDrill(list, i) { state.from = $('screen-kselect').classList.contains('visible') ? 'kselect' : 'home';
+function openDrill(list, i) { state.scoredRun = new Set(); state.from = $('screen-kselect').classList.contains('visible') ? 'kselect' : 'home';
   state.part = state.from === 'kselect' && kGroup && kGroup.part ? kGroup.part : null; state.list = list.slice(); state.idx = i; state.mode = settings.mode; state.warm = false; show('screen-drill'); start(); }
 function goStep(m) { state.mode = m; start(); }
 
@@ -851,15 +966,25 @@ function finish() {
   clear(gHint);
   cur().s.forEach((_, i) => mkNum(i, false));
   const e = state.errs;
-  if (state.mode === 'recall') { recordAttempt(cur().id, e, !state.warm); state.warm = true; }
+  let scoreNote = '';
+  if (state.mode === 'recall') {
+    const id = cur().id, cold = !state.warm;
+    logAttempt(id, e, cold);
+    if (!state.scoredRun.has(id)) {
+      const d = attemptDelta(e, cold);
+      applyDelta(id, d); save(CONF_KEY, conf); state.scoredRun.add(id);
+      scoreNote = ' · ' + (d > 0 ? '+' : d < 0 ? '−' : '±') + String(Math.abs(d)) + (cold ? '' : ' (warm)');
+    }
+    state.warm = true;
+  }
   renderCard(); renderControls();
   const parts = [];
   if (e.order) parts.push(e.order + ' out of order');
   if (e.dir) parts.push(e.dir + ' wrong direction');
   if (e.hint) parts.push(e.hint + (e.hint === 1 ? ' hint' : ' hints'));
   if (e.shape) parts.push(e.shape + ' redrawn');
-  if (!parts.length) feedback(state.mode === 'recall' ? 'Clean from memory' : 'Traced with no mistakes', 'good');
-  else feedback('Done: ' + parts.join(', '), 'info');
+  if (!parts.length) feedback((state.mode === 'recall' ? 'Clean from memory' : 'Traced with no mistakes') + scoreNote, 'good');
+  else feedback('Done: ' + parts.join(', ') + scoreNote, 'info');
 }
 
 function accept(i) {
@@ -976,6 +1101,7 @@ document.querySelectorAll('#mode-pills .pill').forEach(b => b.onclick = () => {
 document.querySelectorAll('#nav-pills .nav-pill').forEach(b => b.onclick = () => { settings.set = b.dataset.set; saveSettings(); goHome(); });
 $('back-btn').onclick = goBack;
 $('kselect-back').onclick = goHome;
+$('conf-bar').onclick = () => { settings.showUntestedBar = !settings.showUntestedBar; saveSettings(); renderHome(); };
 
 /* Search by meaning, copied from kanji-cards: English only, and every query
    word has to prefix-match a word in the meaning, so "sh" finds Sheep, Ship
