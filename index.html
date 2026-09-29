@@ -146,6 +146,10 @@
     border-radius: 50%; border: none; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 14px; }
   .search-btn:hover { color: var(--accent); background: var(--accent-dim); }
   .search-message { font-size: 12.5px; color: var(--text-dim); text-align: center; }
+  .lookup-btn { border: 1.5px solid var(--accent); border-radius: 99px; padding: 10px 14px; font-size: 14px; }
+  .lookup-btn:hover { border-color: var(--accent); background: var(--accent-dim); }
+  #screen-lookup .section-label { margin: 0.25rem 0 0; }
+  .jisho-link { text-align: center; text-decoration: none; display: block; }
   .tile {
     background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
     padding: 8px 2px 6px; text-align: center; cursor: pointer; user-select: none; min-width: 0;
@@ -253,12 +257,13 @@
   .none { font-size: 13px; color: var(--text-dim); }
 
   .board-wrap { width: 100%; max-width: 340px; margin: 0 auto; }
-  #board {
+  #board, #lboard {
     display: block; width: 100%; height: auto; aspect-ratio: 1; max-width: 100%;
     background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius);
     touch-action: none; user-select: none; -webkit-user-select: none; cursor: crosshair;
   }
   #board.locked { cursor: default; }
+  #lboard { cursor: crosshair; }
   .guide { stroke: var(--guide); stroke-width: 0.5; stroke-dasharray: 2 2; fill: none; }
   .stroke { fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-width: 4.2; }
   .ghost { stroke: var(--ghost); }
@@ -334,6 +339,7 @@
         <button class="search-btn" id="kanji-search-btn" title="Search" aria-label="Search">🔍</button>
       </div>
       <div class="search-message" id="kanji-search-message" hidden></div>
+      <button class="btn lookup-btn" id="lookup-open">✍ Look up by drawing</button>
       <div class="pill-row" id="kview-pills">
         <button class="pill" data-kview="order" id="kview-order">In order</button>
         <button class="pill" data-kview="parts" id="kview-parts">By part</button>
@@ -404,6 +410,29 @@
     <button class="btn" id="back-btn">← Back to cards</button>
   </div>
 
+  <!-- Look up: draw a kanji you've seen, see the closest of the 500 -->
+  <div class="screen" id="screen-lookup">
+    <button class="btn" id="lookup-back">← All kanji</button>
+    <div class="title">Look up</div>
+    <div class="sub">Draw the kanji you've seen, in any order. The closest matches appear as you go.</div>
+    <div class="card">
+      <div class="board-wrap">
+        <svg id="lboard" class="lookup-board" viewBox="0 0 109 109" aria-label="Drawing area for look up">
+          <line class="guide" x1="54.5" y1="0" x2="54.5" y2="109"></line>
+          <line class="guide" x1="0" y1="54.5" x2="109" y2="54.5"></line>
+          <g id="l-ink"></g>
+        </svg>
+      </div>
+      <div class="btn-row">
+        <button class="btn" id="lookup-undo">Undo stroke</button>
+        <button class="btn" id="lookup-clear">Clear</button>
+      </div>
+    </div>
+    <div class="section-label" id="lookup-label"></div>
+    <div class="tile-grid" id="lookup-results"></div>
+    <a class="btn jisho-link" id="lookup-jisho" href="https://jisho.org/" target="_blank" rel="noopener">Not here? Search jisho.org ↗</a>
+  </div>
+
   <!-- Settings -->
   <div class="screen" id="screen-settings">
     <div class="title">Settings</div>
@@ -423,7 +452,7 @@
     
     <button class="setting" id="set-romaji"><div><div class="n">Show romaji</div><div class="d">Romaji next to the readings</div></div><div class="toggle"></div></button>
     <button class="btn" id="settings-back">← Back</button>
-    <div class="credit" style="font-weight:600;">v260928.001</div>
+    <div class="credit" style="font-weight:600;">v260929.001</div>
     <p class="credit">Stroke order data from <a href="https://kanjivg.tagaini.net/" target="_blank" rel="noopener">KanjiVG</a> © Ulrich Apel, CC BY-SA 3.0.</p>
   </div>
 </main>
@@ -872,8 +901,11 @@ function partStrokes() {
   return new Set((k.q && k.q[state.part]) || []);
 }
 const partCls = i => partStrokes().has(i) ? ' part' : '';
-function openDrill(list, i) { state.scoredRun = new Set(); state.from = $('screen-kselect').classList.contains('visible') ? 'kselect' : 'home';
-  state.part = state.from === 'kselect' && kGroup && kGroup.part ? kGroup.part : null; state.list = list.slice(); state.idx = i; state.mode = settings.mode; state.warm = false; show('screen-drill'); start(); }
+function openDrill(list, i, step) { state.scoredRun = new Set();
+  state.from = $('screen-kselect').classList.contains('visible') ? 'kselect' : $('screen-lookup').classList.contains('visible') ? 'lookup' : 'home';
+  state.part = state.from === 'kselect' && kGroup && kGroup.part ? kGroup.part : null; state.list = list.slice(); state.idx = i; state.mode = step || settings.mode; state.warm = false;
+  $('back-btn').textContent = state.from === 'lookup' ? '← Back to your drawing' : '← Back to cards';
+  show('screen-drill'); start(); }
 function goStep(m) { state.mode = m; start(); }
 
 function renderReadings(el, list, cls) {
@@ -919,7 +951,7 @@ function renderControls() {
   } else if (state.complete) {
     const next = state.mode === 'trace'
       ? btn('Now from memory', 'btn-primary', 'act-next', () => goStep('recall'))
-      : btn(isLast ? 'Back to cards' : 'Next', 'btn-primary', 'act-next', isLast ? goBack : nextKanji);
+      : btn(isLast ? (state.from === 'lookup' ? 'Back to your drawing' : 'Back to cards') : 'Next', 'btn-primary', 'act-next', isLast ? goBack : nextKanji);
     c.append(btn('Again', '', 'act-again', start), next);
   } else {
     c.append(btn('Hint', 'btn-hint', 'act-hint', () => hint(true)),
@@ -930,7 +962,11 @@ function renderControls() {
 function nextKanji() { state.idx = Math.min(state.idx + 1, ITEMS().length - 1); state.mode = settings.mode; state.warm = false; start(); }
 function goHome() { renderHome(); show('screen-home'); }
 // Back from a drill goes to wherever it was started from.
-function goBack() { if (state.from === 'kselect') { renderKSelect(); show('screen-kselect'); } else goHome(); }
+function goBack() {
+  if (state.from === 'kselect') { renderKSelect(); show('screen-kselect'); }
+  else if (state.from === 'lookup') { show('screen-lookup'); renderLookup(); }   // your drawing is still there
+  else goHome();
+}
 
 async function start() {
   ensurePts(cur());
@@ -1038,11 +1074,92 @@ function evaluate(raw, path) {
   reject(path, 'Not quite. Try stroke ' + (i + 1) + ' again', 'shape');
 }
 
+/* ---------- look up by drawing ----------
+   Draw a kanji you've seen, in any stroke order and direction, and the
+   closest of the 500 come up. Each drawn stroke is paired with a stroke of
+   each candidate kanji (the cheapest pairing overall, via the Hungarian
+   algorithm), so order doesn't matter. Strokes are compared as 16 points
+   along their length, either way round (reversed costs a little extra so
+   the usual direction wins ties). Unpaired strokes add a penalty: a lot for
+   a drawn stroke the kanji doesn't have, a little for a stroke not drawn
+   yet, so matches can be shown while you're still drawing.
+   Each candidate is scored twice: as drawn, and with the drawing resized and
+   re-centred to that kanji's own size, so a kanji drawn small or in a corner
+   still matches. The better of the two counts. */
+const LU = { N: 16, REV: 1.15, EXTRA_DRAWN: 30, NOT_DRAWN: 7, SHOW: 10 };
+function refStrokes(k) {
+  if (!k.lp) k.lp = ensurePts(k).map(s => resample(s, LU.N));
+  return k.lp;
+}
+function strokeCost(u, r) {
+  let f = 0, b = 0;
+  for (let i = 0; i < LU.N; i++) { f += dist(u[i], r[i]); b += dist(u[i], r[LU.N - 1 - i]); }
+  return Math.min(f, b * LU.REV) / LU.N;
+}
+// Minimum-cost assignment for a square cost matrix (Hungarian algorithm).
+function hungarian(a) {
+  const n = a.length, INF = 1e9;
+  const u = new Array(n + 1).fill(0), v = new Array(n + 1).fill(0), p = new Array(n + 1).fill(0), way = new Array(n + 1).fill(0);
+  for (let i = 1; i <= n; i++) {
+    p[0] = i; let j0 = 0;
+    const minv = new Array(n + 1).fill(INF), used = new Array(n + 1).fill(false);
+    do {
+      used[j0] = true; const i0 = p[j0]; let delta = INF, j1 = 0;
+      for (let j = 1; j <= n; j++) if (!used[j]) {
+        const cur = a[i0 - 1][j - 1] - u[i0] - v[j];
+        if (cur < minv[j]) { minv[j] = cur; way[j] = j0; }
+        if (minv[j] < delta) { delta = minv[j]; j1 = j; }
+      }
+      for (let j = 0; j <= n; j++) { if (used[j]) { u[p[j]] += delta; v[j] -= delta; } else minv[j] -= delta; }
+      j0 = j1;
+    } while (p[j0] !== 0);
+    do { const j1 = way[j0]; p[j0] = p[j1]; j0 = j1; } while (j0);
+  }
+  return -v[0];
+}
+function bbox(strokes) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  strokes.forEach(s => s.forEach(([x, y]) => { if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y; }));
+  return { cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, size: Math.max(x1 - x0, y1 - y0, 1) };
+}
+function fitTo(user, ub, rb) {
+  const s = Math.max(0.5, Math.min(2.5, rb.size / ub.size));
+  return user.map(st => st.map(([x, y]) => [rb.cx + (x - ub.cx) * s, rb.cy + (y - ub.cy) * s]));
+}
+function lookupScore(user, k, ub) {
+  const ref = refStrokes(k);
+  if (!k.bb) k.bb = bbox(ref);
+  return Math.min(assignCost(user, ref), assignCost(fitTo(user, ub, k.bb), ref));
+}
+function assignCost(user, ref) {
+  const n = user.length, m = ref.length, K = Math.max(n, m);
+  const a = [];
+  for (let i = 0; i < K; i++) {
+    const row = [];
+    for (let j = 0; j < K; j++) {
+      if (i < n && j < m) row.push(strokeCost(user[i], ref[j]));
+      else if (i < n) row.push(LU.EXTRA_DRAWN);
+      else if (j < m) row.push(LU.NOT_DRAWN);
+      else row.push(0);
+    }
+    a.push(row);
+  }
+  return hungarian(a) / n;
+}
+function lookupRank(rawStrokes, pool) {
+  const user = rawStrokes.map(s => resample(s, LU.N)), n = user.length;
+  if (!n) return [];
+  const ub = bbox(user);
+  return pool.filter(k => k.s.length >= n - 2)
+    .map(k => ({ k, score: lookupScore(user, k, ub) }))
+    .sort((x, y) => x.score - y.score);
+}
+
 /* ---------- pointer input ---------- */
-function toSvg(e) {
-  const pt = board.createSVGPoint();
+function toSvg(e, svg = board) {
+  const pt = svg.createSVGPoint();
   pt.x = e.clientX; pt.y = e.clientY;
-  const q = pt.matrixTransform(board.getScreenCTM().inverse());
+  const q = pt.matrixTransform(svg.getScreenCTM().inverse());
   return [q.x, q.y];
 }
 function cancelInk() { if (state.drawing) { state.drawing.path.remove(); state.drawing = null; } }
@@ -1090,6 +1207,7 @@ $('gear').onclick = () => {
 function closeSettings() {
   if (returnTo === 'screen-drill') { show('screen-drill'); start(); }
   else if (returnTo === 'screen-kselect') { renderKSelect(); show('screen-kselect'); }
+  else if (returnTo === 'screen-lookup') { show('screen-lookup'); renderLookup(); }
   else goHome();
 }
 $('settings-back').onclick = closeSettings;
@@ -1127,6 +1245,69 @@ document.querySelectorAll('#mode-pills .pill').forEach(b => b.onclick = () => {
 document.querySelectorAll('#nav-pills .nav-pill').forEach(b => b.onclick = () => { settings.set = b.dataset.set; saveSettings(); goHome(); });
 $('back-btn').onclick = goBack;
 $('kselect-back').onclick = goHome;
+/* Look up screen */
+const lookup = { strokes: [], paths: [], drawing: null, ready: false, preparing: false };
+const lboard = $('lboard');
+function lookupPool() { return kanjiPages().flatMap(p => p.items); }
+// Measure the 500 kanji in small batches while you start drawing, so the
+// screen opens instantly and matching is ready by the first stroke or two.
+function prepareLookup() {
+  if (lookup.ready || lookup.preparing) return;
+  lookup.preparing = true;
+  const pool = lookupPool(); let i = 0;
+  (function batch() {
+    const end = Math.min(i + 25, pool.length);
+    for (; i < end; i++) refStrokes(pool[i]);
+    if (i < pool.length) { setTimeout(batch, 0); return; }
+    lookup.ready = true; lookup.preparing = false; renderLookup();
+  })();
+}
+function openLookup() { show('screen-lookup'); prepareLookup(); renderLookup(); }
+function renderLookup() {
+  const res = $('lookup-results'); clear(res);
+  const n = lookup.strokes.length;
+  $('lookup-undo').disabled = !n; $('lookup-clear').disabled = !n;
+  if (!n) { $('lookup-label').textContent = 'Matches appear here as you draw'; return; }
+  if (!lookup.ready) { $('lookup-label').textContent = 'Getting ready…'; return; }
+  $('lookup-label').textContent = 'Closest matches · ' + n + (n === 1 ? ' stroke' : ' strokes') + ' drawn';
+  lookupRank(lookup.strokes, lookupPool()).slice(0, LU.SHOW).forEach(({ k }) => {
+    const t = document.createElement('button');
+    t.className = 'tile' + bandClass(k.id); t.id = 'lu-' + k.id;
+    t.innerHTML = '<div class="tk"></div><div class="tm"></div>';
+    t.querySelector('.tk').textContent = k.k;
+    t.querySelector('.tm').textContent = shortMeaning(k.m);
+    t.onclick = () => openDrill([k], 0, 'watch');     // see it drawn, with meaning and readings
+    res.appendChild(t);
+  });
+}
+function lookupUndo() { if (!lookup.strokes.length) return; lookup.strokes.pop(); lookup.paths.pop().remove(); renderLookup(); }
+function lookupClear() { lookup.strokes = []; lookup.paths.forEach(p => p.remove()); lookup.paths = []; renderLookup(); }
+lboard.addEventListener('pointerdown', e => {
+  if (lookup.drawing) return;
+  e.preventDefault(); lboard.setPointerCapture(e.pointerId);
+  const pts = [toSvg(e, lboard)];
+  lookup.drawing = { id: e.pointerId, pts, path: mkPath(toD(pts), 'ink', $('l-ink')) };
+});
+lboard.addEventListener('pointermove', e => {
+  const d = lookup.drawing; if (!d || e.pointerId !== d.id) return;
+  const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [];
+  (evs.length ? evs : [e]).forEach(ev => d.pts.push(toSvg(ev, lboard)));
+  d.path.setAttribute('d', toD(d.pts));
+});
+function lookupEnd(e) {
+  const d = lookup.drawing; if (!d || e.pointerId !== d.id) return;
+  lookup.drawing = null;
+  if (e.type === 'pointercancel' || polyLength(d.pts) < 2) { d.path.remove(); return; }
+  lookup.strokes.push(d.pts); lookup.paths.push(d.path);
+  renderLookup();
+}
+lboard.addEventListener('pointerup', lookupEnd);
+lboard.addEventListener('pointercancel', lookupEnd);
+$('lookup-open').onclick = openLookup;
+$('lookup-back').onclick = goHome;
+$('lookup-undo').onclick = lookupUndo;
+$('lookup-clear').onclick = lookupClear;
+
 $('conf-bar').onclick = () => { settings.showUntestedBar = !settings.showUntestedBar; saveSettings(); renderHome(); };
 
 /* Search by meaning, copied from kanji-cards: English only, and every query
