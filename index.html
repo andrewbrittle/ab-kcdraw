@@ -149,6 +149,8 @@
   .lookup-btn { border: 1.5px solid var(--accent); border-radius: 99px; padding: 10px 14px; font-size: 14px; }
   .lookup-btn:hover { border-color: var(--accent); background: var(--accent-dim); }
   #screen-lookup .section-label { margin: 0.25rem 0 0; }
+  .tile.extra { border-style: dashed; border-color: var(--border-hover); }
+  .lookup-note { font-size: 12px; color: var(--text-dim); text-align: center; }
   .jisho-link { text-align: center; text-decoration: none; display: block; }
   .tile {
     background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
@@ -430,6 +432,7 @@
     </div>
     <div class="section-label" id="lookup-label"></div>
     <div class="tile-grid" id="lookup-results"></div>
+    <div class="lookup-note" id="lookup-note" hidden>Dashed tiles are outside your 500: look up only, not scored.</div>
     <a class="btn jisho-link" id="lookup-jisho" href="https://jisho.org/" target="_blank" rel="noopener">Not here? Search jisho.org ↗</a>
   </div>
 
@@ -452,8 +455,8 @@
     
     <button class="setting" id="set-romaji"><div><div class="n">Show romaji</div><div class="d">Romaji next to the readings</div></div><div class="toggle"></div></button>
     <button class="btn" id="settings-back">← Back</button>
-    <div class="credit" style="font-weight:600;">v260929.001</div>
-    <p class="credit">Stroke order data from <a href="https://kanjivg.tagaini.net/" target="_blank" rel="noopener">KanjiVG</a> © Ulrich Apel, CC BY-SA 3.0.</p>
+    <div class="credit" style="font-weight:600;">v260929.002</div>
+    <p class="credit">Stroke order data from <a href="https://kanjivg.tagaini.net/" target="_blank" rel="noopener">KanjiVG</a> © Ulrich Apel, CC BY-SA 3.0. Meanings and readings from <a href="https://www.edrdg.org/wiki/index.php/KANJIDIC_Project" target="_blank" rel="noopener">KANJIDIC2</a> © EDRDG, CC BY-SA 4.0.</p>
   </div>
 </main>
 
@@ -924,7 +927,7 @@ function renderCard() {
   $('p-char').classList.toggle('hidden-k', hide);
   $('p-m').textContent = k.m;
   const kana = k.set.type === 'kana';
-  $('p-strokes').textContent = k.s.length + (k.s.length === 1 ? ' stroke' : ' strokes') + ' · ' + (kana ? k.set.label : '#' + k.n + (k.j ? ' · ' + k.j : '')) + (!kana && state.part ? ' · part ' + state.part : '');
+  $('p-strokes').textContent = k.s.length + (k.s.length === 1 ? ' stroke' : ' strokes') + ' · ' + (kana ? k.set.label : (k.set.id === 'extra' ? 'not in your 500' : '#' + k.n) + (k.j ? ' · ' + k.j : '')) + (!kana && state.part ? ' · part ' + state.part : '');
   $('p-readings').hidden = kana;
   if (kana) return finishCardRender();
   renderReadings($('p-on'), k.on, 'on');
@@ -1020,7 +1023,7 @@ function finish() {
   cur().s.forEach((_, i) => mkNum(i, false));
   const e = state.errs;
   let scoreNote = '';
-  if (state.mode === 'recall') {
+  if (state.mode === 'recall' && cur().set.id !== 'extra') {     // look-up-only kanji are never scored
     const id = cur().id, cold = !state.warm;
     logAttempt(id, e, cold);
     if (!state.scoredRun.has(id)) {
@@ -1086,10 +1089,35 @@ function evaluate(raw, path) {
    Each candidate is scored twice: as drawn, and with the drawing resized and
    re-centred to that kanji's own size, so a kanji drawn small or in a corner
    still matches. The better of the two counts. */
-const LU = { N: 16, REV: 1.15, EXTRA_DRAWN: 30, NOT_DRAWN: 7, SHOW: 10 };
+const LU = { N: 16, REV: 1.15, EXTRA_DRAWN: 30, NOT_DRAWN: 7, SHOW: 10, SHORTLIST: 80 };
 function refStrokes(k) {
-  if (!k.lp) k.lp = ensurePts(k).map(s => resample(s, LU.N));
+  if (!k.lp) k.lp = k.s.map(d => resample(flatten(d), LU.N));
   return k.lp;
+}
+// Look up only needs rough shapes, so it turns KanjiVG's path data into points
+// directly (curves cut into short straight pieces) rather than asking the
+// browser to measure each path, which is far too slow for 2,000 kanji.
+function flatten(d) {
+  const tok = d.match(/[MmCcSsLlZz]|-?\d*\.?\d+(?:e-?\d+)?/g), out = [];
+  let i = 0, cmd = 'M', x = 0, y = 0, cx = 0, cy = 0;
+  const num = () => +tok[i++];
+  const curve = (x1, y1, x2, y2, x3, y3) => {
+    for (let s = 1; s <= 8; s++) { const u = s / 8, v = 1 - u;
+      out.push([v*v*v*x + 3*v*v*u*x1 + 3*v*u*u*x2 + u*u*u*x3, v*v*v*y + 3*v*v*u*y1 + 3*v*u*u*y2 + u*u*u*y3]); }
+    cx = x2; cy = y2; x = x3; y = y3;
+  };
+  while (i < tok.length) {
+    if (/[A-Za-z]/.test(tok[i])) cmd = tok[i++];
+    const rel = cmd === cmd.toLowerCase(), ox = rel ? x : 0, oy = rel ? y : 0;
+    switch (cmd.toUpperCase()) {
+      case 'M': x = num() + ox; y = num() + oy; cx = x; cy = y; out.push([x, y]); cmd = rel ? 'l' : 'L'; break;
+      case 'L': x = num() + ox; y = num() + oy; cx = x; cy = y; out.push([x, y]); break;
+      case 'C': { const a = num() + ox, b = num() + oy, c = num() + ox, e = num() + oy, f = num() + ox, g = num() + oy; curve(a, b, c, e, f, g); break; }
+      case 'S': { const a = 2 * x - cx, b = 2 * y - cy, c = num() + ox, e = num() + oy, f = num() + ox, g = num() + oy; curve(a, b, c, e, f, g); break; }
+      default: i++;
+    }
+  }
+  return out;
 }
 function strokeCost(u, r) {
   let f = 0, b = 0;
@@ -1126,6 +1154,36 @@ function fitTo(user, ub, rb) {
   const s = Math.max(0.5, Math.min(2.5, rb.size / ub.size));
   return user.map(st => st.map(([x, y]) => [rb.cx + (x - ub.cx) * s, rb.cy + (y - ub.cy) * s]));
 }
+// Four points per stroke (start, two middle, end) packed into plain number
+// arrays, so the first pass over 2,000 kanji stays quick on a phone.
+const RP = [0, 5, 10, 15];
+function pack(strokes) {
+  const f = new Float32Array(strokes.length * 8);
+  strokes.forEach((s, j) => RP.forEach((i, q) => { f[j * 8 + q * 2] = s[i][0]; f[j * 8 + q * 2 + 1] = s[i][1]; }));
+  return f;
+}
+function nearest(u, ui, r, m) {
+  let best = 1e9;
+  for (let j = 0; j < m; j++) {
+    let f = 0, b = 0;
+    for (let q = 0; q < 4; q++) {
+      const x = u[ui + q * 2], y = u[ui + q * 2 + 1];
+      let dx = x - r[j * 8 + q * 2], dy = y - r[j * 8 + q * 2 + 1]; f += Math.sqrt(dx * dx + dy * dy);
+      dx = x - r[j * 8 + (3 - q) * 2]; dy = y - r[j * 8 + (3 - q) * 2 + 1]; b += Math.sqrt(dx * dx + dy * dy);
+    }
+    if (f < best) best = f; if (b * LU.REV < best) best = b * LU.REV;
+  }
+  return best;
+}
+function roughScore(user, up, k, ub) {
+  const ref = refStrokes(k);
+  if (!k.bb) k.bb = bbox(ref);
+  if (!k.rp) k.rp = pack(ref);
+  const fp = pack(fitTo(user, ub, k.bb)), m = ref.length, n = user.length;
+  let a = 0, b = 0;
+  for (let i = 0; i < n; i++) { a += nearest(up, i * 8, k.rp, m); b += nearest(fp, i * 8, k.rp, m); }
+  return (Math.min(a, b) / 4 + Math.max(0, m - n) * LU.NOT_DRAWN + Math.max(0, n - m) * LU.EXTRA_DRAWN) / n;
+}
 function lookupScore(user, k, ub) {
   const ref = refStrokes(k);
   if (!k.bb) k.bb = bbox(ref);
@@ -1149,9 +1207,12 @@ function assignCost(user, ref) {
 function lookupRank(rawStrokes, pool) {
   const user = rawStrokes.map(s => resample(s, LU.N)), n = user.length;
   if (!n) return [];
-  const ub = bbox(user);
-  return pool.filter(k => k.s.length >= n - 2)
-    .map(k => ({ k, score: lookupScore(user, k, ub) }))
+  const ub = bbox(user), up = pack(user);
+  // Quick first pass (each drawn stroke vs its nearest stroke, coarse points)
+  // to shortlist, then the full scoring on the shortlist only.
+  const rough = pool.filter(k => k.s.length >= n - 2).map(k => ({ k, r: roughScore(user, up, k, ub) }))
+    .sort((x, y) => x.r - y.r).slice(0, LU.SHORTLIST);
+  return rough.map(({ k }) => ({ k, score: lookupScore(user, k, ub) }))
     .sort((x, y) => x.score - y.score);
 }
 
@@ -1246,39 +1307,64 @@ document.querySelectorAll('#nav-pills .nav-pill').forEach(b => b.onclick = () =>
 $('back-btn').onclick = goBack;
 $('kselect-back').onclick = goHome;
 /* Look up screen */
-const lookup = { strokes: [], paths: [], drawing: null, ready: false, preparing: false };
+const lookup = { strokes: [], paths: [], drawing: null, extra: 'idle', preparing: false };
 const lboard = $('lboard');
-function lookupPool() { return kanjiPages().flatMap(p => p.items); }
-// Measure the 500 kanji in small batches while you start drawing, so the
-// screen opens instantly and matching is ready by the first stroke or two.
+// The other jōyō kanji (about 1,600) live in lookup-extra.js, which is only
+// loaded the first time Look up opens. They are never scored and don't
+// appear anywhere else in the app.
+const EXTRA_SET = { id: 'extra', type: 'kanji', label: 'Look up only', items: [] };
+function loadExtra() {
+  if (lookup.extra !== 'idle') return;
+  lookup.extra = 'loading';
+  const s = document.createElement('script');
+  s.src = 'lookup-extra.js';
+  s.onload = () => {
+    EXTRA_SET.items = (window.LOOKUP_EXTRA || []);
+    EXTRA_SET.items.forEach(k => { k.set = EXTRA_SET; });
+    lookup.extra = 'loaded'; prepareLookup();
+  };
+  s.onerror = () => { lookup.extra = 'failed'; renderLookup(); };
+  document.head.appendChild(s);
+}
+function lookupPool() { return kanjiPages().flatMap(p => p.items).concat(EXTRA_SET.items); }
+const mineReady = () => kanjiPages().every(p => p.items.every(k => k.lp));
+const allReady = () => lookup.extra !== 'loading' && lookupPool().every(k => k.lp);
+// Measure kanji in small batches (your 500 first) while you start drawing,
+// so the screen opens instantly and never freezes.
 function prepareLookup() {
-  if (lookup.ready || lookup.preparing) return;
+  if (lookup.preparing) return;
   lookup.preparing = true;
-  const pool = lookupPool(); let i = 0;
   (function batch() {
-    const end = Math.min(i + 25, pool.length);
-    for (; i < end; i++) refStrokes(pool[i]);
-    if (i < pool.length) { setTimeout(batch, 0); return; }
-    lookup.ready = true; lookup.preparing = false; renderLookup();
+    const todo = lookupPool().filter(k => !k.lp).slice(0, 25);
+    todo.forEach(refStrokes);
+    if (todo.length) { if (mineReady()) renderLookupSoon(); setTimeout(batch, 0); return; }
+    lookup.preparing = false; renderLookup();
   })();
 }
-function openLookup() { show('screen-lookup'); prepareLookup(); renderLookup(); }
+let renderTimer = null;
+function renderLookupSoon() { if (!renderTimer) renderTimer = setTimeout(() => { renderTimer = null; renderLookup(); }, 400); }
+function openLookup() { show('screen-lookup'); loadExtra(); prepareLookup(); renderLookup(); }
 function renderLookup() {
   const res = $('lookup-results'); clear(res);
   const n = lookup.strokes.length;
   $('lookup-undo').disabled = !n; $('lookup-clear').disabled = !n;
+  $('lookup-note').hidden = true;
   if (!n) { $('lookup-label').textContent = 'Matches appear here as you draw'; return; }
-  if (!lookup.ready) { $('lookup-label').textContent = 'Getting ready…'; return; }
-  $('lookup-label').textContent = 'Closest matches · ' + n + (n === 1 ? ' stroke' : ' strokes') + ' drawn';
-  lookupRank(lookup.strokes, lookupPool()).slice(0, LU.SHOW).forEach(({ k }) => {
+  if (!mineReady()) { $('lookup-label').textContent = 'Getting ready…'; return; }
+  const more = !allReady() ? ' · still adding more kanji…' : lookup.extra === 'failed' ? ' · your 500 only' : '';
+  $('lookup-label').textContent = 'Closest matches · ' + n + (n === 1 ? ' stroke' : ' strokes') + ' drawn' + more;
+  const ranked = lookupRank(lookup.strokes, lookupPool().filter(k => k.lp)).slice(0, LU.SHOW);
+  ranked.forEach(({ k }) => {
+    const extra = k.set.id === 'extra';
     const t = document.createElement('button');
-    t.className = 'tile' + bandClass(k.id); t.id = 'lu-' + k.id;
+    t.className = 'tile' + (extra ? ' extra' : bandClass(k.id)); t.id = 'lu-' + k.id;
     t.innerHTML = '<div class="tk"></div><div class="tm"></div>';
     t.querySelector('.tk').textContent = k.k;
     t.querySelector('.tm').textContent = shortMeaning(k.m);
     t.onclick = () => openDrill([k], 0, 'watch');     // see it drawn, with meaning and readings
     res.appendChild(t);
   });
+  $('lookup-note').hidden = !ranked.some(r => r.k.set.id === 'extra');
 }
 function lookupUndo() { if (!lookup.strokes.length) return; lookup.strokes.pop(); lookup.paths.pop().remove(); renderLookup(); }
 function lookupClear() { lookup.strokes = []; lookup.paths.forEach(p => p.remove()); lookup.paths = []; renderLookup(); }

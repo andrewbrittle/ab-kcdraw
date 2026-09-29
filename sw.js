@@ -8,7 +8,7 @@
 // IMPORTANT: CACHE_VERSION must change whenever the app's version stamp (in
 // index.html, bottom of Settings) changes, so old cached files are cleared.
 // build.py writes both from the same value.
-const CACHE_VERSION = 'strokes-v260929-001';
+const CACHE_VERSION = 'strokes-v260929-002';
 
 const PRECACHE_URLS = [
   './',
@@ -19,6 +19,7 @@ const PRECACHE_URLS = [
   './icons/icon-512-maskable.png',
   './icons/apple-touch-icon.png',
   './fonts/BizUDPGothic-Regular.ttf',
+  './lookup-extra.js',          // extra kanji for Look up
 ];
 
 self.addEventListener('install', (event) => {
