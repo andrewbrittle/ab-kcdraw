@@ -8,7 +8,7 @@
 // IMPORTANT: CACHE_VERSION must change whenever the app's version stamp (in
 // index.html, bottom of Settings) changes, so old cached files are cleared.
 // build.py writes both from the same value.
-const CACHE_VERSION = 'strokes-v260929-002';
+const CACHE_VERSION = 'strokes-v260929-003';
 
 const PRECACHE_URLS = [
   './',
