@@ -282,6 +282,8 @@
   .num { fill: var(--text-dim); font-size: 7px; font-weight: 700; font-family: -apple-system, sans-serif; }
   .num.hl { fill: var(--accent); }
 
+  /* Small kana (see jpHtml): BIZ UDPGothic draws them almost full size. */
+  .small-kana { font-size: 0.65em; }
   .feedback { min-height: 20px; font-size: 14px; font-weight: 600; text-align: center; color: var(--text-muted); }
   .feedback.good { color: var(--green); }
   .feedback.bad-msg { color: var(--red); }
@@ -466,7 +468,7 @@
     
     <button class="setting" id="set-romaji"><div><div class="n">Show romaji</div><div class="d">Romaji next to the readings</div></div><div class="toggle"></div></button>
     <button class="btn" id="settings-back">← Back</button>
-    <div class="credit" style="font-weight:600;">v260929.003</div>
+    <div class="credit" style="font-weight:600;">v261004.001</div>
     <p class="credit">Stroke order data from <a href="https://kanjivg.tagaini.net/" target="_blank" rel="noopener">KanjiVG</a> © Ulrich Apel, CC BY-SA 3.0. Meanings and readings from <a href="https://www.edrdg.org/wiki/index.php/KANJIDIC_Project" target="_blank" rel="noopener">KANJIDIC2</a> © EDRDG, CC BY-SA 4.0.</p>
   </div>
 </main>
@@ -710,6 +712,19 @@ function selectedKana(set) {
 
 /* ---------- small helpers ---------- */
 const clear = g => { while (g.firstChild) g.firstChild.remove(); };
+/* ---------- Japanese text ----------
+   STANDING RULE: every piece of Japanese text goes onto the page through
+   jpHtml() / setJp(), never textContent or a raw innerHTML string.
+   BIZ UDPGothic draws small kana (っ ゃ ゅ ょ ぁ ぃ ぅ ぇ ぉ ゎ, ッ ャ ュ ョ ァ ィ ゥ
+   ェ ォ ヮ) almost full size, so ちょっと reads as chi-yo-tsu-to. The helper
+   wraps each one in <span class="small-kana"> (0.65em) and escapes the rest.
+   Same fix as the Japanese Drill app. */
+const SMALL_KANA = new Set('ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮ');
+const HTML_ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+function jpHtml(str) {
+  return Array.from(String(str), c => SMALL_KANA.has(c) ? '<span class="small-kana">' + c + '</span>' : (HTML_ESC[c] || c)).join('');
+}
+function setJp(el, str) { el.innerHTML = jpHtml(str); }
 const wait = ms => new Promise(r => setTimeout(r, ms));
 const shortMeaning = m => m.split(/[;,]/)[0];
 function mkPath(d, cls, parent) {
@@ -810,7 +825,7 @@ function renderKanaHome(set) {
       const c = document.createElement('button');
       c.className = 'kana-ref-card' + bandClass(k.id) + (chosen.has(k.id) ? ' selected' : ''); c.id = 'kana-' + i;
       c.innerHTML = '<span class="kana-ref-char"></span><span class="kana-ref-rom"></span>';
-      c.firstChild.textContent = k.k; c.lastChild.textContent = k.m;
+      setJp(c.firstChild, k.k); c.lastChild.textContent = k.m;
       c.onclick = () => { chosen.has(k.id) ? chosen.delete(k.id) : chosen.add(k.id); store(); };
       el.appendChild(c);
     });
@@ -855,7 +870,7 @@ function renderKanjiHome() {
     b.className = 'pill' + (g.part ? ' fam-pill' : ''); b.id = 'group-' + g.key;
     if (g.part) {
       b.innerHTML = '<span class="fam-k"></span><span class="fam-name"></span><span class="fam-n"></span>';
-      b.children[0].textContent = g.part; b.children[1].textContent = g.name; b.children[2].textContent = g.items.length;
+      setJp(b.children[0], g.part); b.children[1].textContent = g.name; b.children[2].textContent = g.items.length;
     } else b.textContent = g.pill;
     b.onclick = () => { kGroup = g; kSel.clear(); renderKSelect(); show('screen-kselect'); };
     gp.appendChild(b);
@@ -888,7 +903,7 @@ function renderKSelect() {
       const t = document.createElement('button');
       t.className = 'tile' + bandClass(k.id) + (kSel.has(k.id) ? ' selected' : ''); t.id = 'tile-' + k.id;
       t.innerHTML = '<div class="tk"></div><div class="tm"></div>';
-      t.querySelector('.tk').textContent = k.k;
+      setJp(t.querySelector('.tk'), k.k);
       t.querySelector('.tm').textContent = shortMeaning(k.m);
       t.onclick = () => { kSel.has(k.id) ? kSel.delete(k.id) : kSel.add(k.id); renderKSelect(); };
       tiles.appendChild(t);
@@ -926,7 +941,7 @@ function renderReadings(el, list, cls) {
   clear(el);
   if (!list.length) { const s = document.createElement('span'); s.className = 'none'; s.textContent = 'none'; el.appendChild(s); return; }
   list.forEach(([kana, rom]) => {
-    const s = document.createElement('span'); s.className = 'rd-item ' + cls; s.textContent = kana;
+    const s = document.createElement('span'); s.className = 'rd-item ' + cls; setJp(s, kana);
     if (rom) { const sm = document.createElement('small'); sm.textContent = rom; s.appendChild(sm); }
     el.appendChild(s);
   });
@@ -934,7 +949,7 @@ function renderReadings(el, list, cls) {
 
 function renderCard() {
   const k = cur(), hide = state.mode === 'recall' && !state.complete;
-  $('p-char').textContent = hide ? '？' : k.k;
+  setJp($('p-char'), hide ? '？' : k.k);
   $('p-char').classList.toggle('hidden-k', hide);
   $('p-m').textContent = k.m;
   const kana = k.set.type === 'kana';
@@ -1469,7 +1484,7 @@ function renderLookup() {
     const t = document.createElement('button');
     t.className = 'tile' + (extra ? ' extra' : bandClass(k.id)); t.id = 'lu-' + k.id;
     t.innerHTML = '<div class="tk"></div><div class="tm"></div>';
-    t.querySelector('.tk').textContent = k.k;
+    setJp(t.querySelector('.tk'), k.k);
     t.querySelector('.tm').textContent = shortMeaning(k.m);
     t.onclick = () => openDrill([k], 0, 'watch');     // see it drawn, with meaning and readings
     res.appendChild(t);
