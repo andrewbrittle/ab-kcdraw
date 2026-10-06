@@ -468,7 +468,7 @@
     
     <button class="setting" id="set-romaji"><div><div class="n">Show romaji</div><div class="d">Romaji next to the readings</div></div><div class="toggle"></div></button>
     <button class="btn" id="settings-back">← Back</button>
-    <div class="credit" style="font-weight:600;">v261004.001</div>
+    <div class="credit" style="font-weight:600;">v261006.001</div>
     <p class="credit">Stroke order data from <a href="https://kanjivg.tagaini.net/" target="_blank" rel="noopener">KanjiVG</a> © Ulrich Apel, CC BY-SA 3.0. Meanings and readings from <a href="https://www.edrdg.org/wiki/index.php/KANJIDIC_Project" target="_blank" rel="noopener">KANJIDIC2</a> © EDRDG, CC BY-SA 4.0.</p>
   </div>
 </main>
@@ -991,10 +991,16 @@ function renderControls() {
 function nextKanji() { state.idx = Math.min(state.idx + 1, ITEMS().length - 1); state.mode = settings.mode; state.warm = false; start(); }
 function goHome() { renderHome(); show('screen-home'); }
 // Back from a drill goes to wherever it was started from.
+// A practised selection is cleared on the way back, so the next pick starts
+// fresh (as in the Japanese Drill app). Look up keeps your drawing.
 function goBack() {
-  if (state.from === 'kselect') { renderKSelect(); show('screen-kselect'); }
+  if (state.from === 'kselect') { kSel.clear(); renderKSelect(); show('screen-kselect'); }
   else if (state.from === 'lookup') { show('screen-lookup'); renderLookup(); }   // your drawing is still there
-  else goHome();
+  else {
+    const set = kanaSet(settings.set);
+    if (set && set.type === 'kana') { settings.picked[set.id] = []; saveSettings(); }
+    goHome();
+  }
 }
 
 async function start() {
