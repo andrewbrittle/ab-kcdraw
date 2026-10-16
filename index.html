@@ -1,7 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<!-- translate="no": a phone set to translate Japanese pages would mangle the readings (as happened in the Japanese Drill app). -->
+<html lang="en" translate="no" class="notranslate">
 <head>
 <meta charset="UTF-8">
+<meta name="google" content="notranslate">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <!-- PWA: manifest + icons (Add to Home Screen / Install app) -->
 <link rel="manifest" href="manifest.json">
@@ -90,6 +92,8 @@
     color: var(--text-muted); font-size: 15px; cursor: pointer;
     display: flex; align-items: center; justify-content: center; transition: all 0.15s;
   }
+  .head-btns { display: flex; gap: 6px; flex-shrink: 0; }
+  .settings-btn.muted { color: var(--text-dim); }
   .settings-btn:hover { border-color: var(--border-hover); color: var(--text); }
   .settings-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
   .nav-pills { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
@@ -228,6 +232,9 @@
   }
   .btn:hover { border-color: var(--border-hover); background: var(--surface2); }
   .screen > .btn { flex: none; }
+  /* Back: top-left of every inner page, naming where it goes. */
+  .nav-back { align-self: flex-start; background: none; border: none; padding: 2px 0; margin: 0 0 -0.4rem; font: inherit; font-size: 14px; font-weight: 600; color: var(--accent); cursor: pointer; text-align: left; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .nav-back:active { opacity: 0.6; }
   .btn-primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 700; }
   .btn-primary:hover { opacity: 0.88; background: var(--accent); }
   .btn-hint { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
@@ -311,6 +318,40 @@
   .toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: var(--text-dim); transition: all 0.2s; }
   .setting.on .toggle { background: var(--accent); border-color: var(--accent); }
   .setting.on .toggle::after { left: 21px; background: var(--on-accent); }
+  /* Hold to peek (from the Japanese Drill app): no iOS copy/Look Up bubble
+     or text selection while a tile is held. */
+  .tile, .kana-ref-card { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+  .tile.tile-peeking, .kana-ref-card.tile-peeking { border-color: var(--accent); }
+  /* Floats above (or beside) the held tile, since a finger covers the tile
+     itself. Never intercepts touches. */
+  .tile-peek-bubble {
+    position: fixed; z-index: 1000; pointer-events: none;
+    background: var(--surface); border: 2px solid var(--accent); border-radius: 12px;
+    padding: 10px 14px; text-align: center; width: max-content; max-width: min(82vw, 320px);
+    box-shadow: 0 6px 24px rgba(0,0,0,0.45);
+  }
+  .peek-top { display: flex; align-items: center; justify-content: center; gap: 12px; }
+  .peek-svg { width: 84px; height: 84px; flex: none; background: var(--surface2); border-radius: 8px; }
+  .peek-svg .stroke { stroke-width: 5; }
+  .peek-head { text-align: left; }
+  .peek-m { font-size: 15px; font-weight: 700; color: var(--accent); margin-top: 2px; }
+  .peek-meta { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+  .peek-rd { font-size: 14px; margin-top: 8px; text-align: left; line-height: 1.5; }
+  .peek-rd .lab { font-size: 11px; font-weight: 700; color: var(--text-dim); margin-right: 6px; }
+  .peek-rd .jp { font-family: var(--jp); }
+  .peek-rd small { font-size: 12px; color: var(--text-muted); margin-left: 3px; }
+  body.no-romaji .peek-rd small { display: none; }
+  .install-card { flex-direction: row; align-items: center; gap: 12px; }
+  .install-card[hidden] { display: none !important; }
+  .install-card .install-text { flex: 1; }
+  .install-card .install-why { margin-top: 4px; }
+  .install-btn { flex-shrink: 0; padding: 8px 16px; border-radius: 99px; border: 1px solid var(--accent); background: var(--accent-dim); color: var(--accent); font-weight: 700; font-size: 13px; cursor: pointer; font-family: inherit; }
+  .share-card { gap: 0.6rem; }
+  .share-qr { display: block; width: 168px; height: 168px; margin: 0.2rem auto 0; border-radius: 6px; }
+  .share-url { text-align: center; font-size: 12px; color: var(--text-muted); word-break: break-all; }
+  .share-divider { border-top: 1px solid var(--border); margin: 0.3rem 0 0.1rem; }
+  .share-link { display: block; text-decoration: none; color: inherit; border: 1px solid var(--border); border-radius: var(--radius); padding: 0.6rem 0.75rem; }
+  .share-link .n { color: var(--accent); }
   .credit { font-size: 11.5px; color: var(--text-dim); text-align: center; line-height: 1.5; }
   .credit a { color: var(--text-muted); }
 
@@ -323,7 +364,10 @@
 <header>
   <div class="app-heading"><span>漢字</span> strokes</div>
   <div class="nav-row">
-    <button class="settings-btn" id="gear" title="Settings" aria-label="Settings">⚙</button>
+    <div class="head-btns">
+      <button class="settings-btn" id="gear" title="Settings" aria-label="Settings">⚙</button>
+      <button class="settings-btn" id="sound-btn" title="Sound" aria-label="Sound"></button>
+    </div>
     <div class="nav-pills" id="nav-pills">
       <button class="nav-pill" data-set="kanji" id="nav-kanji">漢字</button>
       <button class="nav-pill" data-set="hira" id="nav-hira">ひらがな</button>
@@ -377,7 +421,6 @@
 
   <!-- Kanji selection: one set of pages, pick pages or single kanji -->
   <div class="screen" id="screen-kselect">
-    <button class="btn" id="kselect-back">← All kanji</button>
     <div class="title" id="group-title"></div>
     <div class="sub" id="kselect-sub"></div>
     <div class="btn-row">
@@ -422,12 +465,11 @@
       <div class="grade" id="grade" hidden></div>
     </div>
     <div class="btn-row" id="controls"></div>
-    <button class="btn" id="back-btn">← Back to cards</button>
+    <button class="btn" id="back-btn">← Back</button>
   </div>
 
   <!-- Look up: draw a kanji you've seen, see the closest of the 500 -->
   <div class="screen" id="screen-lookup">
-    <button class="btn" id="lookup-back">← All kanji</button>
     <div class="title">Look up</div>
     <div class="sub">Draw the kanji you've seen, in any order. The closest matches appear as you go.</div>
     <div class="card">
@@ -453,6 +495,18 @@
   <div class="screen" id="screen-settings">
     <div class="title">Settings</div>
     <div class="sub">Everything is stored on this device only.</div>
+    
+    <!-- Install card: only shown when the app is open as a web page rather
+         than installed (see refreshInstallCard). Same as the Japanese Drill app. -->
+    <div class="setting static install-card" id="install-card" hidden>
+      <div class="install-text">
+        <div class="n">Install the app</div>
+        <div class="d" id="install-card-steps"></div>
+        <div class="d install-why">Installed, it opens full screen from its own icon and works offline.</div>
+      </div>
+      <button type="button" class="install-btn" id="install-btn" hidden>Install</button>
+    </div>
+    
     <div class="setting static">
       <div><div class="n">Stroke checking</div><div class="d" id="len-desc"></div></div>
       <div class="pill-row" id="len-pills" style="justify-content:flex-start; margin-top:0.6rem;">
@@ -463,12 +517,23 @@
     </div>
     <button class="setting" id="set-kanji"><div><div class="n">Show kanji</div><div class="d">The 500 kanji alongside hiragana and katakana</div></div><div class="toggle"></div></button>
     <button class="setting" id="set-theme"><div><div class="n">Light theme</div><div class="d">Switches from the default dark look</div></div><div class="toggle"></div></button>
-    
-    <button class="setting" id="set-offline"><div><div class="n">Work offline</div><div class="d">Keeps a copy on this device so it opens with no signal. Turn it on, then open the app once while you still have signal.</div></div><div class="toggle"></div></button>
-    
     <button class="setting" id="set-romaji"><div><div class="n">Show romaji</div><div class="d">Romaji next to the readings</div></div><div class="toggle"></div></button>
-    <button class="btn" id="settings-back">← Back</button>
-    <div class="credit" style="font-weight:600;">v261006.001</div>
+    <!-- Share card: a QR code for this app, and links to the sister apps. -->
+    <div class="setting static share-card" id="share-app-card">
+      <div><div class="n">Share this app</div><div class="d">Let a friend scan this to open the app on their phone</div></div>
+      <svg class="share-qr" viewBox="-2 -2 33 33" role="img" aria-label="QR code for this app" shape-rendering="crispEdges"><rect x="-2" y="-2" width="33" height="33" fill="#fff"/><path fill="#000" d="M0 0h7v1h-7zM8 0h1v1h-1zM11 0h1v1h-1zM13 0h2v1h-2zM17 0h2v1h-2zM22 0h7v1h-7zM0 1h1v1h-1zM6 1h1v1h-1zM8 1h2v1h-2zM12 1h1v1h-1zM14 1h1v1h-1zM16 1h2v1h-2zM19 1h2v1h-2zM22 1h1v1h-1zM28 1h1v1h-1zM0 2h1v1h-1zM2 2h3v1h-3zM6 2h1v1h-1zM8 2h1v1h-1zM10 2h5v1h-5zM16 2h1v1h-1zM20 2h1v1h-1zM22 2h1v1h-1zM24 2h3v1h-3zM28 2h1v1h-1zM0 3h1v1h-1zM2 3h3v1h-3zM6 3h1v1h-1zM9 3h1v1h-1zM12 3h2v1h-2zM15 3h3v1h-3zM19 3h2v1h-2zM22 3h1v1h-1zM24 3h3v1h-3zM28 3h1v1h-1zM0 4h1v1h-1zM2 4h3v1h-3zM6 4h1v1h-1zM8 4h1v1h-1zM10 4h3v1h-3zM14 4h1v1h-1zM16 4h1v1h-1zM18 4h3v1h-3zM22 4h1v1h-1zM24 4h3v1h-3zM28 4h1v1h-1zM0 5h1v1h-1zM6 5h1v1h-1zM11 5h1v1h-1zM14 5h1v1h-1zM17 5h2v1h-2zM20 5h1v1h-1zM22 5h1v1h-1zM28 5h1v1h-1zM0 6h7v1h-7zM8 6h1v1h-1zM10 6h1v1h-1zM12 6h1v1h-1zM14 6h1v1h-1zM16 6h1v1h-1zM18 6h1v1h-1zM20 6h1v1h-1zM22 6h7v1h-7zM10 7h1v1h-1zM13 7h2v1h-2zM16 7h1v1h-1zM19 7h1v1h-1zM0 8h1v1h-1zM3 8h6v1h-6zM11 8h2v1h-2zM14 8h1v1h-1zM16 8h2v1h-2zM19 8h1v1h-1zM21 8h1v1h-1zM24 8h1v1h-1zM26 8h3v1h-3zM1 9h1v1h-1zM3 9h1v1h-1zM7 9h1v1h-1zM9 9h2v1h-2zM15 9h2v1h-2zM19 9h1v1h-1zM23 9h2v1h-2zM26 9h2v1h-2zM0 10h1v1h-1zM4 10h5v1h-5zM12 10h4v1h-4zM17 10h1v1h-1zM20 10h1v1h-1zM23 10h1v1h-1zM26 10h1v1h-1zM0 11h2v1h-2zM8 11h5v1h-5zM15 11h4v1h-4zM20 11h6v1h-6zM28 11h1v1h-1zM3 12h1v1h-1zM5 12h2v1h-2zM10 12h2v1h-2zM15 12h2v1h-2zM20 12h1v1h-1zM22 12h1v1h-1zM28 12h1v1h-1zM1 13h1v1h-1zM3 13h3v1h-3zM7 13h4v1h-4zM12 13h7v1h-7zM21 13h8v1h-8zM2 14h5v1h-5zM8 14h1v1h-1zM11 14h1v1h-1zM13 14h1v1h-1zM15 14h1v1h-1zM18 14h2v1h-2zM22 14h1v1h-1zM24 14h1v1h-1zM26 14h1v1h-1zM28 14h1v1h-1zM0 15h3v1h-3zM4 15h2v1h-2zM7 15h1v1h-1zM11 15h2v1h-2zM16 15h1v1h-1zM18 15h1v1h-1zM21 15h1v1h-1zM23 15h2v1h-2zM26 15h1v1h-1zM28 15h1v1h-1zM2 16h2v1h-2zM6 16h1v1h-1zM8 16h1v1h-1zM10 16h2v1h-2zM13 16h1v1h-1zM15 16h1v1h-1zM23 16h1v1h-1zM25 16h1v1h-1zM0 17h1v1h-1zM4 17h2v1h-2zM7 17h2v1h-2zM12 17h1v1h-1zM14 17h2v1h-2zM17 17h1v1h-1zM19 17h2v1h-2zM24 17h1v1h-1zM26 17h2v1h-2zM0 18h2v1h-2zM3 18h1v1h-1zM6 18h5v1h-5zM12 18h1v1h-1zM15 18h1v1h-1zM17 18h1v1h-1zM19 18h5v1h-5zM25 18h1v1h-1zM28 18h1v1h-1zM0 19h2v1h-2zM5 19h1v1h-1zM7 19h3v1h-3zM11 19h3v1h-3zM15 19h2v1h-2zM19 19h1v1h-1zM22 19h2v1h-2zM25 19h2v1h-2zM0 20h2v1h-2zM3 20h2v1h-2zM6 20h2v1h-2zM10 20h1v1h-1zM12 20h1v1h-1zM16 20h2v1h-2zM19 20h9v1h-9zM8 21h1v1h-1zM10 21h2v1h-2zM13 21h4v1h-4zM18 21h3v1h-3zM24 21h2v1h-2zM0 22h7v1h-7zM8 22h1v1h-1zM13 22h1v1h-1zM15 22h2v1h-2zM18 22h3v1h-3zM22 22h1v1h-1zM24 22h2v1h-2zM0 23h1v1h-1zM6 23h1v1h-1zM8 23h5v1h-5zM14 23h2v1h-2zM17 23h4v1h-4zM24 23h1v1h-1zM0 24h1v1h-1zM2 24h3v1h-3zM6 24h1v1h-1zM8 24h1v1h-1zM12 24h3v1h-3zM16 24h1v1h-1zM18 24h8v1h-8zM27 24h1v1h-1zM0 25h1v1h-1zM2 25h3v1h-3zM6 25h1v1h-1zM8 25h3v1h-3zM14 25h5v1h-5zM20 25h2v1h-2zM28 25h1v1h-1zM0 26h1v1h-1zM2 26h3v1h-3zM6 26h1v1h-1zM9 26h3v1h-3zM14 26h2v1h-2zM17 26h1v1h-1zM19 26h2v1h-2zM23 26h2v1h-2zM26 26h3v1h-3zM0 27h1v1h-1zM6 27h1v1h-1zM9 27h1v1h-1zM11 27h1v1h-1zM16 27h1v1h-1zM18 27h1v1h-1zM22 27h5v1h-5zM28 27h1v1h-1zM0 28h7v1h-7zM8 28h1v1h-1zM10 28h4v1h-4zM19 28h6v1h-6z"/></svg>
+      <div class="share-url">andrewbrittle.github.io/ab-kcdraw</div>
+      <div class="share-divider"></div>
+      <a class="share-link" href="https://andrewbrittle.github.io/Japanese-drill-L3/" target="_blank" rel="noopener">
+        <div class="n">Japanese drill →</div>
+        <div class="d">Kana, kanji and vocab drilling for the Japanese course</div>
+      </a>
+      <a class="share-link" href="https://andrewbrittle.github.io/ab-kcdrill/" target="_blank" rel="noopener">
+        <div class="n">Kanji cards →</div>
+        <div class="d">Drill a set of the 500 most common kanji</div>
+      </a>
+    </div>
+    <div class="credit" style="font-weight:600;">v261016.002</div>
     <p class="credit">Stroke order data from <a href="https://kanjivg.tagaini.net/" target="_blank" rel="noopener">KanjiVG</a> © Ulrich Apel, CC BY-SA 3.0. Meanings and readings from <a href="https://www.edrdg.org/wiki/index.php/KANJIDIC_Project" target="_blank" rel="noopener">KANJIDIC2</a> © EDRDG, CC BY-SA 4.0.</p>
   </div>
 </main>
@@ -561,7 +626,7 @@ function confidenceBand(score) {
 }
 const bandClass = id => { const b = confidenceBand(decayedScore(conf[id])); return b ? ' c-' + b : ''; };
 const storedSettings = load(STORE_KEY + '.settings', null);
-const settings = Object.assign({ showUntestedBar: false, set: 'hira', picked: { hira: [], kata: [] }, kview: 'order', mode: 'watch', len: 'normal', romaji: true, light: false, offline: false }, storedSettings || {});
+const settings = Object.assign({ showUntestedBar: false, set: 'hira', picked: { hira: [], kata: [] }, kview: 'order', mode: 'watch', len: 'normal', romaji: true, light: false, soundOn: true }, storedSettings || {});
 // Earlier builds saved the drill's last step as the home choice, which could
 // leave it stuck on Recall. Reset that once.
 if (settings.v !== 2) { settings.mode = 'watch'; settings.v = 2; }
@@ -575,6 +640,7 @@ if (settings.showKanji === undefined) {
 settings.set = settings.showKanji ? 'kanji' : 'hira';
 settings.picked = settings.picked || { hira: [], kata: [] };
 delete settings.rows;   // row-only selection from an earlier build
+delete settings.offline; // the Work offline switch (offline is always on now)
 const saveSettings = () => save(STORE_KEY + '.settings', settings);
 saveSettings();          // keeps the showKanji decision from here on
 // Always set explicitly, so the page stays dark unless Light theme is switched on.
@@ -756,13 +822,233 @@ function btn(label, cls, id, fn) {
 }
 function feedback(msg, cls) { const f = $('feedback'); f.textContent = msg; f.className = 'feedback' + (cls ? ' ' + cls : ''); }
 
+/* ---------- sound ----------
+   Same as the Japanese Drill app: the header's speaker button switches every
+   sound on or off (for now that's hold-to-peek reading the character out).
+   Uses the phone's own Japanese voice, so how it sounds depends on the phone. */
+const SPEECH_SUPPORTED = ('speechSynthesis' in window);
+const soundAllowed = () => SPEECH_SUPPORTED && settings.soundOn !== false;
+// iPhone/iPad: Safari ignores speech that doesn't start inside a tap, and
+// peek speaks from a timer. One silent utterance during the first real tap
+// unlocks speech for the rest of the visit.
+let speechUnlocked = false;
+function unlockSpeech() {
+  if (speechUnlocked || !soundAllowed()) return;
+  speechUnlocked = true;
+  try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } catch (e) {}
+}
+if (SPEECH_SUPPORTED) ['touchend', 'click', 'keydown'].forEach(t => document.addEventListener(t, unlockSpeech, { capture: true, passive: true }));
+function speakJapanese(text) {
+  if (!soundAllowed() || !text) return;
+  unlockSpeech();
+  if (speechSynthesis.speaking || speechSynthesis.pending) speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'ja-JP'; u.rate = 0.85;
+  const v = speechSynthesis.getVoices().find(v => v.lang && v.lang.toLowerCase().startsWith('ja'));
+  if (v) u.voice = v;
+  speechSynthesis.speak(u);
+}
+const SOUND_ICON_ON = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 9 8 9 12 5 12 19 8 15 3 15" fill="currentColor"></polygon><path d="M15.5 8.5a5 5 0 0 1 0 7"></path><path d="M18.5 5.5a9 9 0 0 1 0 13"></path></svg>';
+const SOUND_ICON_OFF = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 9 8 9 12 5 12 19 8 15 3 15" fill="currentColor"></polygon><line x1="16" y1="9" x2="22" y2="15"></line><line x1="22" y1="9" x2="16" y2="15"></line></svg>';
+function updateSoundButton() {
+  const b = $('sound-btn');
+  if (!SPEECH_SUPPORTED) { b.hidden = true; return; }
+  const on = soundAllowed();
+  b.innerHTML = on ? SOUND_ICON_ON : SOUND_ICON_OFF;
+  b.classList.toggle('muted', !on);
+  b.title = on ? 'Sound on - tap to mute' : 'Sound off - tap to turn on';
+  b.setAttribute('aria-label', b.title);
+}
+// What to say for a character: kana as they are; a kanji's readings (the
+// kanji on its own is ambiguous), up to two on and two kun, okurigana joined.
+function speechFor(k) {
+  if (k.set && k.set.type === 'kana') return k.k;
+  const plain = r => r[0].replace(/[().\-]/g, '');
+  return [...(k.on || []).slice(0, 2), ...(k.kun || []).slice(0, 2)].map(plain).join('、');
+}
+
+/* ---------- hold to peek ----------
+   From the Japanese Drill app. Hold a tile (kanji, kana, or a Look up match)
+   and a bubble shows its meaning, readings and stroke order, drawn stroke by
+   stroke, and reads it out. Letting go closes it. A finger that starts
+   moving is a scroll, which cancels the hold; the tap that follows a peek is
+   swallowed so it doesn't also select or open the tile. */
+const PEEK_HOLD_MS = 450;
+const PEEK_MOVE_TOLERANCE = 16;   // px of finger wobble allowed before the bubble appears
+let peekSuppressClickUntil = 0, peekToken = 0;
+const peekSwallowed = () => Date.now() < peekSuppressClickUntil;
+function peekReadings(lab, list) {
+  if (!list || !list.length) return '';
+  return '<div><span class="lab">' + lab + '</span>' + list.slice(0, 3).map(([kana, rom]) =>
+    '<span class="jp">' + jpHtml(kana) + '</span><small>' + jpHtml(rom) + '</small>').join('　') + '</div>';
+}
+function showPeekBubble(tile, k) {
+  hidePeekBubble();
+  const kana = k.set && k.set.type === 'kana', extra = k.set && k.set.id === 'extra';
+  const b = document.createElement('div');
+  b.className = 'tile-peek-bubble'; b.id = 'tile-peek-bubble';
+  const meta = k.s.length + (k.s.length === 1 ? ' stroke' : ' strokes') + (kana ? '' : (k.j ? ' · ' + k.j : '') + (extra ? ' · not in your 500' : ''));
+  b.innerHTML = '<div class="peek-top"><svg class="peek-svg" viewBox="0 0 109 109"></svg><div class="peek-head">'
+    + '<div class="peek-m"></div><div class="peek-meta"></div></div></div>'
+    + (kana ? '' : '<div class="peek-rd">' + peekReadings('ON', k.on) + peekReadings('KUN', k.kun) + '</div>');
+  b.querySelector('.peek-m').textContent = k.m;   // the full meaning (kana: its romaji)
+  b.querySelector('.peek-meta').textContent = meta;
+  document.body.appendChild(b);
+  // Above the tile if it fits, else beside it on the roomier side, else below; always on screen.
+  const r = tile.getBoundingClientRect(), bw = b.offsetWidth, bh = b.offsetHeight;
+  const vw = window.innerWidth, vh = window.innerHeight, gap = 10, m = 8;
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  let left, top;
+  if (r.top - gap - bh >= m) { top = r.top - gap - bh; left = clamp(r.left + r.width / 2 - bw / 2, m, vw - bw - m); }
+  else {
+    const roomRight = vw - r.right - gap - m, roomLeft = r.left - gap - m;
+    if (Math.max(roomRight, roomLeft) >= Math.min(bw, 160)) {
+      left = clamp(roomRight >= roomLeft ? r.right + gap : r.left - gap - bw, m, vw - bw - m);
+      top = clamp(r.top, m, vh - bh - m);
+    } else { top = clamp(r.bottom + gap, m, vh - bh - m); left = clamp(r.left + r.width / 2 - bw / 2, m, vw - bw - m); }
+  }
+  b.style.left = left + 'px'; b.style.top = top + 'px';
+  playPeekStrokes(b.querySelector('.peek-svg'), k);
+}
+// The stroke order, drawn one stroke after another (faster than Watch), then held.
+async function playPeekStrokes(svg, k) {
+  const token = ++peekToken;
+  k.s.forEach(d => mkPath(d, 'ghost', svg));
+  for (const d of k.s) {
+    if (token !== peekToken) return;
+    const p = mkPath(d, 'done', svg);
+    if (REDUCED) continue;
+    const L = p.getTotalLength(), ms = Math.round(120 + L * 3.5);
+    p.style.strokeDasharray = L + ' ' + L; p.style.strokeDashoffset = L;
+    p.getBoundingClientRect();
+    p.style.transition = 'stroke-dashoffset ' + ms + 'ms ease-in-out'; p.style.strokeDashoffset = 0;
+    await wait(ms + 40);
+  }
+}
+function hidePeekBubble() {
+  peekToken++;
+  const old = $('tile-peek-bubble');
+  if (old) { old.remove(); return true; }
+  return false;
+}
+function attachPeek(tile, k) {
+  let timer = null, peeking = false, startX = 0, startY = 0, pointerId = null;
+  const begin = () => {
+    timer = null; peeking = true;
+    tile.classList.add('tile-peeking');
+    showPeekBubble(tile, k);
+    peekSuppressClickUntil = Date.now() + 1000;
+    speakJapanese(speechFor(k));
+  };
+  const end = () => {
+    if (timer) { clearTimeout(timer); timer = null; }
+    if (!peeking) return;
+    peeking = false;
+    tile.classList.remove('tile-peeking');
+    hidePeekBubble();
+    peekSuppressClickUntil = Date.now() + 400;
+  };
+  // Once the bubble is showing, only lifting the finger closes it: the
+  // pointer is captured and touchmove blocked, so the page can't scroll.
+  tile.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    startX = e.clientX; startY = e.clientY; pointerId = e.pointerId;
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => { try { tile.setPointerCapture(pointerId); } catch (err) {} begin(); }, PEEK_HOLD_MS);
+  });
+  tile.addEventListener('pointermove', e => {
+    if (timer && (Math.abs(e.clientX - startX) > PEEK_MOVE_TOLERANCE || Math.abs(e.clientY - startY) > PEEK_MOVE_TOLERANCE)) { clearTimeout(timer); timer = null; }
+  });
+  tile.addEventListener('touchmove', e => { if (peeking && e.cancelable) e.preventDefault(); }, { passive: false });
+  ['pointerup', 'pointercancel'].forEach(ev => tile.addEventListener(ev, end));
+  tile.addEventListener('pointerleave', () => { if (!peeking) end(); });
+  tile.addEventListener('contextmenu', e => e.preventDefault());
+}
+
 /* ---------- screens ---------- */
 function show(id) {
+  navRecord(id.replace(/^screen-/, ''));
+  hidePeekBubble();
   document.querySelectorAll('.screen').forEach(s => s.classList.toggle('visible', s.id === id));
   $('gear').classList.toggle('active', id === 'screen-settings');
   if (id !== 'screen-drill') state.token++;       // stop any running animation
+  renderNavBack();
   window.scrollTo(0, 0);
 }
+
+/* ---------- navigation history ----------
+   Same scheme as the Japanese Drill app. Every screen change is recorded,
+   so Back (the "← …" link at the top left of inner pages, the phone's back
+   gesture, the drill's bottom Back, and ⚙ tapped again) goes exactly one
+   step up. The Kanji / Hiragana / Katakana pages are the main pages: Back
+   does nothing there, so the app can't be left by accident. A drill is never
+   stepped back into (Back from it goes to wherever it was started), except
+   from Settings opened mid-drill. */
+var navStack = [], navCurrent = null, navGoingBack = false;
+const NAV_ROOTS = ['home'];
+const NAV_TRANSIENT = ['drill'];
+function navRecord(id) {
+  const vis = document.querySelector('.screen.visible');
+  const prev = navCurrent || (vis ? vis.id.replace(/^screen-/, '') : null);
+  navCurrent = id;
+  if (navGoingBack || !prev || prev === id) return;
+  if (NAV_ROOTS.includes(id)) { navStack = []; return; }
+  if (navStack.length && navStack[navStack.length - 1] === id) { navStack.pop(); return; }
+  if (NAV_TRANSIENT.includes(prev) && id !== 'settings') return;
+  navStack.push(prev);
+}
+// How to show each screen again when Back returns to it.
+const NAV_RESTORE = {
+  home: () => { renderHome(); show('screen-home'); },
+  kselect: () => { renderKSelect(); show('screen-kselect'); },
+  lookup: () => { show('screen-lookup'); renderLookup(); },      // your drawing is still there
+  drill: () => { show('screen-drill'); start(); },
+  settings: () => { renderSettings(); show('screen-settings'); },
+};
+function navBack() {
+  if (hidePeekBubble()) return;          // a bubble open? Back closes that first
+  if (!navStack.length && !NAV_ROOTS.includes(navCurrent)) navStack.push('home');   // safety net
+  if (!navStack.length) return;          // on a main page: do nothing
+  const target = navStack.pop();
+  // Leaving a drill clears the selection it was started from, so the next
+  // pick starts fresh. Look up keeps your drawing.
+  if (navCurrent === 'drill') {
+    if (target === 'kselect') kSel.clear();
+    if (target === 'home') { const set = kanaSet(settings.set); if (set && set.type === 'kana') { settings.picked[set.id] = []; saveSettings(); } }
+  }
+  navGoingBack = true;
+  try { (NAV_RESTORE[target] || NAV_RESTORE.home)(); } finally { navGoingBack = false; }
+  renderNavBack();
+}
+function navLabel(id) {
+  if (id === 'home') return settings.set === 'kanji' ? 'Kanji' : (kanaSet(settings.set) || {}).label || 'Back';
+  if (id === 'kselect') return $('group-title').textContent.trim() || 'Kanji';
+  if (id === 'lookup') return 'Look up';
+  if (id === 'drill') return 'Drill';
+  if (id === 'settings') return 'Settings';
+  return 'Back';
+}
+const navTarget = () => navStack.length ? navStack[navStack.length - 1] : 'home';
+function renderNavBack() {
+  document.querySelectorAll('.nav-back').forEach(b => b.remove());
+  if (!navStack.length && NAV_ROOTS.includes(navCurrent)) return;
+  const scr = document.getElementById('screen-' + navCurrent);
+  if (!scr) return;
+  let label = navLabel(navTarget());
+  if (label.length > 30) label = label.slice(0, 28).trim() + '…';
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'nav-back'; b.textContent = '← ' + label; b.onclick = navBack;
+  scr.insertBefore(b, scr.firstChild);
+  if (navCurrent === 'drill') $('back-btn').textContent = '← ' + label;   // the drill's bottom Back, same place
+}
+function toggleSettings() {
+  if (navCurrent === 'settings' && navStack.length) navBack();
+  else if (navCurrent !== 'settings') { renderSettings(); show('screen-settings'); }
+}
+// The phone's back gesture or button: one step back in the app; on a main
+// page it does nothing. History is kept one entry deep and re-armed each time.
+history.pushState({ trap: true }, '');
+window.addEventListener('popstate', () => { history.pushState({ trap: true }, ''); navBack(); });
 
 function renderHome() {
   document.querySelectorAll('#nav-pills .nav-pill').forEach(b => b.classList.toggle('active', b.dataset.set === settings.set));
@@ -826,7 +1112,8 @@ function renderKanaHome(set) {
       c.className = 'kana-ref-card' + bandClass(k.id) + (chosen.has(k.id) ? ' selected' : ''); c.id = 'kana-' + i;
       c.innerHTML = '<span class="kana-ref-char"></span><span class="kana-ref-rom"></span>';
       setJp(c.firstChild, k.k); c.lastChild.textContent = k.m;
-      c.onclick = () => { chosen.has(k.id) ? chosen.delete(k.id) : chosen.add(k.id); store(); };
+      c.onclick = () => { if (peekSwallowed()) return; chosen.has(k.id) ? chosen.delete(k.id) : chosen.add(k.id); store(); };
+      attachPeek(c, k);
       el.appendChild(c);
     });
     grid.appendChild(el);
@@ -905,7 +1192,8 @@ function renderKSelect() {
       t.innerHTML = '<div class="tk"></div><div class="tm"></div>';
       setJp(t.querySelector('.tk'), k.k);
       t.querySelector('.tm').textContent = shortMeaning(k.m);
-      t.onclick = () => { kSel.has(k.id) ? kSel.delete(k.id) : kSel.add(k.id); renderKSelect(); };
+      t.onclick = () => { if (peekSwallowed()) return; kSel.has(k.id) ? kSel.delete(k.id) : kSel.add(k.id); renderKSelect(); };
+      attachPeek(t, k);
       tiles.appendChild(t);
     });
     wrap.appendChild(tiles);
@@ -933,7 +1221,6 @@ const partCls = i => partStrokes().has(i) ? ' part' : '';
 function openDrill(list, i, step) { state.scoredRun = new Set();
   state.from = $('screen-kselect').classList.contains('visible') ? 'kselect' : $('screen-lookup').classList.contains('visible') ? 'lookup' : 'home';
   state.part = state.from === 'kselect' && kGroup && kGroup.part ? kGroup.part : null; state.list = list.slice(); state.idx = i; state.mode = step || settings.mode; state.warm = false;
-  $('back-btn').textContent = state.from === 'lookup' ? '← Back to your drawing' : '← Back to cards';
   show('screen-drill'); start(); }
 function goStep(m) { state.mode = m; start(); }
 
@@ -980,7 +1267,7 @@ function renderControls() {
   } else if (state.complete) {
     const next = state.mode === 'trace'
       ? btn('Now from memory', 'btn-primary', 'act-next', () => goStep('recall'))
-      : btn(isLast ? (state.from === 'lookup' ? 'Back to your drawing' : 'Back to cards') : 'Next', 'btn-primary', 'act-next', isLast ? goBack : nextKanji);
+      : btn(isLast ? (navTarget() === 'lookup' ? 'Back to your drawing' : 'Back to ' + navLabel(navTarget())) : 'Next', 'btn-primary', 'act-next', isLast ? navBack : nextKanji);
     c.append(btn('Again', '', 'act-again', start), next);
   } else {
     c.append(btn('Hint', 'btn-hint', 'act-hint', () => hint(true)),
@@ -991,17 +1278,6 @@ function renderControls() {
 function nextKanji() { state.idx = Math.min(state.idx + 1, ITEMS().length - 1); state.mode = settings.mode; state.warm = false; start(); }
 function goHome() { renderHome(); show('screen-home'); }
 // Back from a drill goes to wherever it was started from.
-// A practised selection is cleared on the way back, so the next pick starts
-// fresh (as in the Japanese Drill app). Look up keeps your drawing.
-function goBack() {
-  if (state.from === 'kselect') { kSel.clear(); renderKSelect(); show('screen-kselect'); }
-  else if (state.from === 'lookup') { show('screen-lookup'); renderLookup(); }   // your drawing is still there
-  else {
-    const set = kanaSet(settings.set);
-    if (set && set.type === 'kana') { settings.picked[set.id] = []; saveSettings(); }
-    goHome();
-  }
-}
 
 async function start() {
   ensurePts(cur());
@@ -1388,45 +1664,69 @@ function renderSettings() {
   $('set-romaji').classList.toggle('on', settings.romaji);
   $('set-theme').classList.toggle('on', settings.light);
   $('set-kanji').classList.toggle('on', settings.showKanji);
-  if ($('set-offline')) $('set-offline').classList.toggle('on', settings.offline);
+  refreshInstallCard();
 }
-let returnTo = 'screen-home';
-$('gear').onclick = () => {
-  if ($('screen-settings').classList.contains('visible')) { closeSettings(); return; }
-  returnTo = (document.querySelector('.screen.visible') || {}).id || 'screen-home';
-  renderSettings(); show('screen-settings');
+$('gear').onclick = toggleSettings;
+$('sound-btn').onclick = () => {
+  settings.soundOn = settings.soundOn === false; saveSettings();
+  if (!settings.soundOn && SPEECH_SUPPORTED) speechSynthesis.cancel();
+  updateSoundButton();
 };
-function closeSettings() {
-  if (returnTo === 'screen-drill') { show('screen-drill'); start(); }
-  else if (returnTo === 'screen-kselect') { renderKSelect(); show('screen-kselect'); }
-  else if (returnTo === 'screen-lookup') { show('screen-lookup'); renderLookup(); }
-  else goHome();
-}
-$('settings-back').onclick = closeSettings;
+updateSoundButton();
 document.querySelectorAll('#len-pills .pill').forEach(b => b.onclick = () => { settings.len = b.dataset.len; saveSettings(); renderSettings(); });
 $('set-kanji').onclick = () => {
   settings.showKanji = !settings.showKanji;
   if (!settings.showKanji && settings.set === 'kanji') settings.set = 'hira';
+  if (!settings.showKanji) navStack = navStack.filter(id => id !== 'kselect' && id !== 'lookup');
   saveSettings(); applyKanjiVisibility(); renderSettings();
 };
 function applyKanjiVisibility() { $('nav-kanji').hidden = !settings.showKanji; }
 applyKanjiVisibility();
 $('set-theme').onclick = () => { settings.light = !settings.light; saveSettings(); applyTheme(); renderSettings(); };
-// Offline copy (standalone app only), as in the Japanese Drill app: the service
-// worker is registered only while "Work offline" is on.
-function syncServiceWorker() {
-  if (!('serviceWorker' in navigator) || location.protocol === 'file:') return;
-  if (settings.offline) {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
-  } else {
-    navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister())).catch(() => {});
-    if (window.caches) caches.keys().then(ns => ns.filter(n => n.startsWith('strokes-')).forEach(n => caches.delete(n))).catch(() => {});
-  }
+// Offline is always on (16 Oct 2026, as in the other apps; the "Work offline"
+// switch was removed). Safe because sw.js is network-first: with signal you
+// always get the newest version, and the saved copy is only used without it.
+// Only in the real app: the preview has no sw.js.
+if ('serviceWorker' in navigator && location.protocol !== 'file:' && $('install-card')) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
 }
-if ($('set-offline')) {
-  $('set-offline').onclick = () => { settings.offline = !settings.offline; saveSettings(); syncServiceWorker(); renderSettings(); };
-  syncServiceWorker();
+
+/* ---------- install card ----------
+   Same as the Japanese Drill app. A browser reports whether the page is
+   running as an installed home-screen app; when it isn't, Settings shows how
+   to install it on this device. Android and desktop Chrome offer their own
+   install prompt (beforeinstallprompt), so there the card gets an Install
+   button. */
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredInstallPrompt = e; refreshInstallCard(); });
+window.addEventListener('appinstalled', () => { deferredInstallPrompt = null; refreshInstallCard(); });
+function appIsInstalled() {
+  try {
+    return ['standalone', 'fullscreen', 'minimal-ui'].some(m => window.matchMedia('(display-mode: ' + m + ')').matches) || window.navigator.standalone === true;
+  } catch (e) { return false; }
 }
+function refreshInstallCard() {
+  const card = $('install-card');
+  if (!card) return;
+  if (appIsInstalled() || location.protocol === 'file:') { card.hidden = true; return; }
+  const ua = navigator.userAgent || '';
+  const ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);   // iPadOS says it's a Mac
+  const android = /Android/.test(ua);
+  let steps;
+  if (ios) steps = 'Tap the Share button (the square with an arrow, at the bottom in Safari or top right in Chrome), scroll down and tap <strong>Add to Home Screen</strong>, then Add.';
+  else if (android && deferredInstallPrompt) steps = 'Tap <strong>Install</strong>, or use the browser menu (⋮) → Install app.';
+  else if (android) steps = 'In Chrome, tap the menu (⋮) at the top right, then <strong>Install app</strong> or <strong>Add to Home screen</strong>.';
+  else if (deferredInstallPrompt) steps = 'Click <strong>Install</strong>, or use the install icon at the right of the address bar.';
+  else steps = 'On a phone, open this page and use the browser\'s Add to Home Screen. On a computer, look for an install icon at the right of the address bar (Chrome or Edge).';
+  $('install-card-steps').innerHTML = steps;
+  $('install-btn').hidden = !deferredInstallPrompt;
+  card.hidden = false;
+}
+if ($('install-btn')) $('install-btn').onclick = () => {
+  if (!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  deferredInstallPrompt.userChoice.finally(() => { deferredInstallPrompt = null; refreshInstallCard(); });
+};
 $('set-romaji').onclick = () => { settings.romaji = !settings.romaji; saveSettings(); renderSettings(); };
 
 /* ---------- wiring ---------- */
@@ -1435,8 +1735,7 @@ document.querySelectorAll('#mode-pills .pill').forEach(b => b.onclick = () => {
   if ($('screen-kselect').classList.contains('visible')) renderKSelect(); else renderHome();
 });
 document.querySelectorAll('#nav-pills .nav-pill').forEach(b => b.onclick = () => { settings.set = b.dataset.set; saveSettings(); goHome(); });
-$('back-btn').onclick = goBack;
-$('kselect-back').onclick = goHome;
+$('back-btn').onclick = navBack;
 /* Look up screen */
 const lookup = { strokes: [], paths: [], drawing: null, extra: 'idle', preparing: false };
 const lboard = $('lboard');
@@ -1492,7 +1791,8 @@ function renderLookup() {
     t.innerHTML = '<div class="tk"></div><div class="tm"></div>';
     setJp(t.querySelector('.tk'), k.k);
     t.querySelector('.tm').textContent = shortMeaning(k.m);
-    t.onclick = () => openDrill([k], 0, 'watch');     // see it drawn, with meaning and readings
+    t.onclick = () => { if (!peekSwallowed()) openDrill([k], 0, 'watch'); };     // see it drawn, with meaning and readings
+    attachPeek(t, k);
     res.appendChild(t);
   });
   $('lookup-note').hidden = !ranked.some(r => r.k.set.id === 'extra');
@@ -1521,7 +1821,6 @@ function lookupEnd(e) {
 lboard.addEventListener('pointerup', lookupEnd);
 lboard.addEventListener('pointercancel', lookupEnd);
 $('lookup-open').onclick = openLookup;
-$('lookup-back').onclick = goHome;
 $('lookup-undo').onclick = lookupUndo;
 $('lookup-clear').onclick = lookupClear;
 

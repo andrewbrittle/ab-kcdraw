@@ -1,6 +1,5 @@
 // Service worker for Kanji Strokes - same pattern as the Japanese Drill app.
-// Opt-in only, via the "Work offline" setting; the app registers and
-// unregisters it, it never registers itself.
+// Always on since 16 Oct 2026 (the "Work offline" switch was removed).
 //
 // Network-first, cache-fallback for every GET: online you always get the
 // newest version, and the cache is only used when the network fails.
@@ -8,7 +7,7 @@
 // IMPORTANT: CACHE_VERSION must change whenever the app's version stamp (in
 // index.html, bottom of Settings) changes, so old cached files are cleared.
 // build.py writes both from the same value.
-const CACHE_VERSION = 'strokes-v261006-001';
+const CACHE_VERSION = 'strokes-v261016-002';
 
 const PRECACHE_URLS = [
   './',
@@ -19,7 +18,8 @@ const PRECACHE_URLS = [
   './icons/icon-512-maskable.png',
   './icons/apple-touch-icon.png',
   './fonts/BizUDPGothic-Regular.ttf',
-  './lookup-extra.js',          // extra kanji for Look up
+  // lookup-extra.js (1.6 MB) isn't fetched up front: it's saved the first
+  // time Look up loads it, by the fetch handler below.
 ];
 
 self.addEventListener('install', (event) => {
