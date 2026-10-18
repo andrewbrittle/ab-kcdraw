@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en" translate="no" class="notranslate">
+<head>
+<meta charset="UTF-8">
+<!-- translate="no": a phone set to translate Japanese pages would mangle the kana. -->
+<meta name="google" content="notranslate">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How it works — Kanji strokes</title>
+<style>
+  /* Same look as the Japanese Drill app's instructions and changelog pages. */
+  @font-face { font-family: 'BIZ UDPGothic'; font-style: normal; font-weight: 400; font-display: swap; src: url('fonts/BizUDPGothic-Regular.ttf') format('truetype'); }
+  :root {
+    --bg: #0f0f0f; --surface: #1a1a1a; --surface2: #242424;
+    --text: #f8f6f2; --text-muted: rgba(248,246,242,0.66); --text-dim: rgba(248,246,242,0.42);
+    --accent: #e8c97a; --accent-dim: rgba(232,201,122,0.12);
+    --border: rgba(255,255,255,0.08); --border-hover: rgba(255,255,255,0.16);
+  }
+  :root[data-theme="light"] {
+    --bg: #f7f5f0; --surface: #ffffff; --surface2: #efece4;
+    --text: #1a1a1a; --text-muted: rgba(26,26,26,0.66); --text-dim: rgba(26,26,26,0.45);
+    --accent: #a9740f; --accent-dim: rgba(169,116,15,0.12);
+    --border: rgba(0,0,0,0.10); --border-hover: rgba(0,0,0,0.20);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.55; }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 24px 20px 64px; }
+  .back-link { display: inline-block; font-size: 13px; font-weight: 600; color: var(--text-muted); text-decoration: none; border: 1px solid var(--border); border-radius: 99px; padding: 6px 14px; margin-bottom: 20px; }
+  .back-link:hover { border-color: var(--border-hover); color: var(--text); }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h1 span, .jp { font-family: 'BIZ UDPGothic', -apple-system, sans-serif; }
+  h1 span { color: var(--accent); }
+  .byline { font-size: 13px; font-weight: 600; color: var(--text-dim); margin-bottom: 18px; }
+  .intro { font-size: 15px; color: var(--text-muted); margin-bottom: 32px; }
+  h2 { font-size: 17px; color: var(--accent); border-top: 1px solid var(--border); padding-top: 24px; margin: 32px 0 12px; }
+  h2:first-of-type { border-top: none; padding-top: 0; }
+  p { font-size: 14.5px; color: var(--text-muted); margin: 0 0 12px; }
+  .setting { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; }
+  .setting-name { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+  .setting-desc { font-size: 13.5px; color: var(--text-muted); }
+  ul { margin: 0 0 12px; padding-left: 20px; }
+  li { font-size: 14.5px; color: var(--text-muted); margin-bottom: 4px; }
+  .note { font-size: 13px; color: var(--text-dim); background: var(--surface2); border-radius: 8px; padding: 8px 12px; margin: 10px 0 16px; }
+  .entry { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; }
+  .entry-date { font-size: 12px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+  .entry ul { margin: 0; padding-left: 20px; }
+  .entry li:last-child { margin-bottom: 0; }
+  .footer { margin-top: 40px; text-align: center; }
+  .small-kana { font-size: 0.65em; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back-link" href="./index.html">← Back to the app</a>
+
+  <h1><span>漢字</span> strokes: how it works</h1>
+  <div class="byline">Andrew Brittle, 2026</div>
+  <p class="intro">
+    An app for learning to write hiragana, katakana and kanji by hand. You draw
+    on the screen with your finger, one stroke at a time, and each stroke is
+    checked against the real stroke order: where it goes, which way it runs,
+    and whether it comes in the right order. It sits alongside the Japanese
+    drill and Kanji cards: those train reading and meaning, this one trains
+    your hand.
+  </p>
+
+  <h2>Getting around</h2>
+  <p>The tabs along the top (<span class="jp">漢字</span>, <span class="jp">ひらがな</span>, <span class="jp">カタカナ</span>) take you to each part of the app. Once you go deeper, into a set of kanji, Look up or a drill, a link at the top left says where Back will take you and goes one step back. Your phone's own back gesture or button does the same. On a main page Back does nothing, so you can't leave the app by accident. Back from a drill goes to wherever you started it.</p>
+  <p>The ⚙ button opens Settings, and tapping it again takes you back to where you were. The speaker button beside it turns sound on or off.</p>
+
+  <h2>Hiragana and katakana</h2>
+  <p>Each script has its own chart. Tap characters to pick them, or tap a row label (ka, sa, ta…) to pick the whole row. Then choose a starting step and press Start.</p>
+  <p>Under the 46 basic characters there are three more sections:</p>
+  <ul>
+    <li><strong>Dakuten and handakuten:</strong> <span class="jp">が</span> to <span class="jp">ぽ</span> (and <span class="jp">ヴ</span> in katakana). The marks are the last strokes, after the base character.</li>
+    <li><strong>Small kana:</strong> <span class="jp">ゃ ゅ ょ っ</span> and the rest, plus the long-vowel mark <span class="jp">ー</span> in katakana.</li>
+    <li><strong>Contracted pairs:</strong> <span class="jp">きゃ</span>, <span class="jp">しゅ</span>, <span class="jp">ちょ</span> and so on, drawn as a pair so you can see how small the second character is and where it sits.</li>
+  </ul>
+
+  <h2>Kanji</h2>
+  <p>The kanji tab has the same 500 kanji as Kanji cards, which you can view three ways:</p>
+  <ul>
+    <li><strong>In order:</strong> blocks of 20, in the same order as Kanji cards.</li>
+    <li><strong>By part:</strong> kanji that share a part, such as <span class="jp">氵</span> or <span class="jp">口</span>, with the shared part drawn in gold so it sticks.</li>
+    <li><strong>By JLPT:</strong> grouped by level, from N5 (easiest) to N1.</li>
+  </ul>
+  <p>Tap a group to see its kanji, then tap the ones you want (or a block heading for all of them) and press Start. You can also search by meaning: type "water" or "eat" and press the round search button. The × clears the box.</p>
+  <div class="note">The kanji tab is hidden for new users, so the app starts on kana. Switch it on in Settings with "Show kanji".</div>
+
+  <h2>Watch, Trace and Recall</h2>
+  <p>Every character can be practised in three steps:</p>
+  <ul>
+    <li><strong>Watch:</strong> the character is drawn for you, stroke by stroke, with the stroke numbers.</li>
+    <li><strong>Trace:</strong> draw over a grey guide.</li>
+    <li><strong>Recall:</strong> draw it from memory on a blank board.</li>
+  </ul>
+  <p>On the home screen you choose which step each new character starts at. During a drill the step pills let you go back to Watch or Trace whenever you want. In Recall, Hint shows the next stroke, and after two misses on the same stroke it shows it for you.</p>
+
+  <h2>What counts as right</h2>
+  <p>Each stroke has to be in roughly the right place, go the right way (left to right, top to bottom, as written) and come in the right order. If it doesn't, the app tells you which: "Right place, wrong direction", or "That is stroke 4. Stroke 3 comes first". How strict it is about position is set in Settings.</p>
+  <p>When you finish a character in Trace or Recall, you get a <strong>drawing grade</strong>: Neat, Good, OK or Rough. Your own strokes are laid over the model as thin blue lines, and any stroke that was well off is shown in red. Only the shape counts: drawing small or off-centre doesn't count against you. The grade is just for you and doesn't affect your score.</p>
+
+  <h2>Hold to peek</h2>
+  <p>Hold any tile (a kana, a kanji, or a Look up result) for half a second. A bubble shows its stroke order being drawn, its meaning and readings, and it's read out loud. Let go to close it. A quick tap still picks the tile as usual. Sound uses your phone's own Japanese voice, and the speaker button at the top turns it off.</p>
+
+  <h2>Look up by drawing</h2>
+  <p>On the kanji tab, "Look up by drawing" lets you draw a kanji you've seen somewhere, in any order, and the closest matches appear as you go. Tap one to see it drawn, with its meaning and readings. It knows all 2,136 jōyō kanji, not just the 500: the ones outside the 500 have dashed tiles and aren't scored.</p>
+  <div class="note">A stroke that bends (like the first stroke of <span class="jp">女</span>) can be drawn as one line or two: Look up tries both.</div>
+
+  <h2>Scores and colours</h2>
+  <p>Only Recall is scored, and only the first Recall of each character in a practice run. A clean recall straight from a cold start scores most. One after watching or tracing it first scores less. Wrong order, wrong direction and hints take a little off. Scores fade slowly if you don't practise, so characters come back round.</p>
+  <p>Tiles are shaded from red (struggling) through blue to green (confident), and the bar above each chart shows how a whole set is going. Tap the bar to include or hide characters you haven't tried yet.</p>
+
+  <h2>Settings</h2>
+  <div class="setting"><div class="setting-name">Stroke checking</div><div class="setting-desc">Strict, Normal or Relaxed: how close to the model each stroke has to be. Order and direction always count.</div></div>
+  <div class="setting"><div class="setting-name">Show kanji</div><div class="setting-desc">Shows the kanji tab alongside hiragana and katakana.</div></div>
+  <div class="setting"><div class="setting-name">Light theme</div><div class="setting-desc">Switches from the default dark look.</div></div>
+  <div class="setting"><div class="setting-name">Show romaji</div><div class="setting-desc">Romaji next to the readings.</div></div>
+  <div class="setting"><div class="setting-name">Back up my progress</div><div class="setting-desc">Saves your scores to a file. If your phone's browser data is ever cleared, Restore from backup puts them back.</div></div>
+  <div class="setting"><div class="setting-name">Share this app</div><div class="setting-desc">A QR code a friend can scan to open the app, plus links to the Japanese drill and Kanji cards.</div></div>
+
+  <h2>Installing the app</h2>
+  <p>The app works as an ordinary web page, but it's better installed: it then opens full screen from its own icon on your home screen and works with no signal. If you're using it in a browser, Settings shows an <strong>Install the app</strong> card with the steps for your phone, and it disappears once the app is installed.</p>
+  <ul>
+    <li><strong>iPhone:</strong> in Safari, tap the Share button (the square with an arrow) at the bottom, scroll down, tap Add to Home Screen, then Add. In Chrome on iPhone the Share button is at the top right.</li>
+    <li><strong>Android:</strong> in Chrome, tap Install on the card if it's there, or the menu (⋮) at the top right, then Install app or Add to Home screen.</li>
+  </ul>
+
+  <h2>Where it all comes from</h2>
+  <p>Stroke order is from <a href="https://kanjivg.tagaini.net/" style="color:var(--accent);">KanjiVG</a> © Ulrich Apel (CC BY-SA 3.0). Meanings and readings are from <a href="https://www.edrdg.org/wiki/index.php/KANJIDIC_Project" style="color:var(--accent);">KANJIDIC2</a> © EDRDG (CC BY-SA 4.0). Everything you do is stored on your own phone only.</p>
+
+  <div class="footer">
+    <a class="back-link" href="./index.html">← Back to the app</a>
+  </div>
+</div>
+<script>
+  // Match the app's theme: this page shares localStorage with index.html.
+  try {
+    const s = JSON.parse(localStorage.getItem('kanjiStrokes.v2.settings') || '{}');
+    if (s.light) document.documentElement.setAttribute('data-theme', 'light');
+  } catch (e) {}
+</script>
+</body>
+</html>

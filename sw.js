@@ -7,7 +7,7 @@
 // IMPORTANT: CACHE_VERSION must change whenever the app's version stamp (in
 // index.html, bottom of Settings) changes, so old cached files are cleared.
 // build.py writes both from the same value.
-const CACHE_VERSION = 'strokes-v261017-002';
+const CACHE_VERSION = 'strokes-v261018-001';
 
 const PRECACHE_URLS = [
   './',
@@ -18,6 +18,8 @@ const PRECACHE_URLS = [
   './icons/icon-512-maskable.png',
   './icons/apple-touch-icon.png',
   './fonts/BizUDPGothic-Regular.ttf',
+  './instructions.html',
+  './changelog.html',
   // lookup-extra.js (1.6 MB) isn't fetched up front: it's saved the first
   // time Look up loads it, by the fetch handler below.
 ];
