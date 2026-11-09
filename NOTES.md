@@ -22,6 +22,8 @@ index.html          the app (single file: HTML, CSS, JS and the 500-kanji + kana
 sw.js               service worker: offline copy, always on (network-first)
 manifest.json       PWA manifest (has "id": "./index.html")
 lookup-extra.js     the other ~1,636 jōyō kanji, for Look up only (loaded lazily)
+instructions.html   "How this app works" (linked from Settings; precached)
+changelog.html      "What's new" (linked from Settings; precached)
 icons/              192, 512, 512-maskable, apple-touch-icon (書 in gold)
 fonts/              BizUDPGothic-Regular.ttf (self-hosted)
 NOTES.md            this file
@@ -74,15 +76,63 @@ stale copy.
 - `Display` is the 1–500 order.
 - Any change to the list must be mirrored in Kanji Cards.
 
-## Main features (as of v261016.002)
+## Matching the other two apps (18 Oct 2026)
+
+From `HANDOVER-from-japanese-app-consistency.md`. Strokes now matches the
+Japanese Drill and Kanji Cards on:
+- **Header:** 🔊 then ⚙ at the right of the title line, tabs right-aligned
+  underneath, 16px side padding.
+- **Search box:** a clear × inside the pill (shown once there's text), and a
+  round search button outside it.
+- **Back up my progress** (Settings): one JSON file holding
+  `{ app: 'kanji-strokes', v: 1, scores, conf, neat, picked }`, named
+  `kanji-strokes-backup-YYYY-MM-DD.json`. Restore refuses files from other
+  apps, asks before replacing, and saves all four stores.
+- **Settings footer order:** contact line ("Any problems: Andrew …"), then
+  credits, then version.
+- **"How this app works" and "What's new"** pills at the top of Settings.
+  - ⚙ goes green (`has-update`) while `settings.lastSeenChangelog` isn't
+    `LATEST_CHANGELOG_ENTRY`. Opening Settings marks it seen, and the What's
+    new pill stays green for that visit.
+  - The pages read `kanjiStrokes.v2.settings` to match the theme.
+
+"Weakest 20" doesn't apply: Strokes has no Random, Weak or Untested buttons.
+
+## Main features (as of v261018.001)
 
 - **Steps:** Watch, Trace, Recall. Each new kanji restarts at the chosen
   step, and there are step pills on the drill screen.
 - **Kanji views:** in order (blocks of 20, five blocks per pill), by part
   (shared part drawn in gold), by JLPT. Search by meaning (copied from Kanji
   Cards).
-- **Kana:** pick individual characters or whole rows. No dakuten or small
-  kana in the practice sets yet.
+- **Kana:** pick individual characters or whole rows. Hiragana has 114
+  characters and katakana 116.
+  - The 46 base kana.
+  - Since 17 Oct 2026, two more sections under ん/ン: "Dakuten and
+    handakuten" (が … ぽ, plus ヴ) and "Small kana" (ぁ … ぉ, ゃ ゅ ょ, っ, ゎ,
+    and ー on the katakana chart).
+  - The new 72 came from Japanese Drill L3's KanjiVG extraction
+    (`build/kana-extra.json`, from `HANDOVER-kana-strokes.md`).
+  - Sets carry `rowLabels` and `sections` for the chart. Items can have `r`,
+    a short tile romaji: ゃ shows "ya" on its tile but "small ya" (`m`) on the
+    card. ぢ/づ are "ji (di)" / "zu (du)" on the card.
+  - Small kana are drawn at KanjiVG's own size, about 80%.
+  - **Contracted pairs** (17 Oct 2026, the "Contracted pairs" section):
+    きゃ … ぴょ and キャ … ピョ, 33 per script, three per row in the a/u/o
+    columns.
+    - Built in `build_data.py` (`make_pair`) from the two characters already
+      in the set. The small kana is placed as L3 places it after another
+      character (75%, from its bottom-left corner, 22 units closer).
+    - The whole pair is then scaled to fit the square board (about 87–93
+      units wide), with paths and number positions transformed exactly by
+      `map_path`.
+    - On their own, small kana look like big kana, which is why pairs exist.
+    - Tested: all 66 pass when drawn carefully or with wobble, with no false
+      order flags. A small kana drawn 30 units off is rejected (66 of 66),
+      and starting it before the main character is finished counts as out of
+      order (66 of 66).
+    - A wider two-character board was considered and left for later if the
+      square feels cramped.
 - **Navigation (from the Japanese Drill L3 handover, 16 Oct 2026):** every
   screen change goes through `show()`, which records history (`navRecord`).
   - Kanji / Hiragana / Katakana are the main pages. Back does nothing there,
@@ -102,6 +152,11 @@ stale copy.
 - **Checking:** strokes are resampled to 32 points and compared forwards,
   reversed and for order. Leniency strict 0.75, normal 1 (default), relaxed
   1.4.
+  - Strokes close together (a dakuten's two ticks) can each pass as the other.
+    So an accepted stroke that fits a later stroke at least twice as well
+    (`ORDER_CLEARER` 0.5) counts as out of order.
+  - Tested: swapped ticks caught in 41 of 41, and no false order flags across
+    all kana and kanji drawn with wobble.
 - **Confidence score:** same model as Kanji Cards. Score runs −2 to +2,
   positive scores decay with a 50-day half-life, 8 bands. Strokes' own rule
   for one Recall:
@@ -161,6 +216,13 @@ localStorage keys:
 
 ## Standing rules
 
+- **What's new:** for any change users will notice:
+  1. Add a line to `changelog.html` (newest first, dated).
+  2. Bump `LATEST_CHANGELOG_ENTRY` in template.html to that date (add a
+     letter, e.g. `2026-10-18b`, for a second entry on the same day).
+  3. Update `instructions.html` if the change affects how something is
+     used.
+
 - **Small kana:** every piece of Japanese text goes onto the page through
   `jpHtml()` / `setJp()` in template.html, never `textContent` or a raw
   `innerHTML` string.
@@ -181,3 +243,25 @@ localStorage keys:
   and fix root causes rather than patching symptoms.
 - **Pace:** go slowly. Small, testable steps rather than big builds that need
   refactoring.
+
+## Six sign kanji swapped in (9 Nov 2026)
+
+Andrew's decision, made with the Japanese drill app's kanji joining-up:
+鉄 警 避 震 波 津 (sign and safety kanji: 地下鉄, 警察, 避難, 地震, 津波)
+joined the 500 in the display slots of six rarely needed ones, 羊 的 卒 比 泣
+州, which moved to Look up only. New IDs 502-507; nothing else moved, so
+every other kanji keeps its display number and block. Mirrored in Kanji
+Cards (same list) and the main app.
+
+- **KanjiVG version.** The kv/ SVGs were fetched again for this
+  (release r20240807); KanjiVG has corrected a few strokes since the app was
+  first built. So the build was run, then every existing kanji and kana was
+  put back exactly as it was (stroke paths, number positions and all), and
+  only the six new kanji use the new release. Do the same next time:
+  never let a rebuild silently change strokes people have practised.
+  Old part families likewise kept their members; three new families appear
+  because a new kanji makes a third member (金, 皮, 聿).
+- **lookup-extra.js** was edited in the same way (the six out added with
+  build_extra.py's own code, the six in removed), not rebuilt.
+- kanji-data.json (the KANJIDIC fields mirror) is now saved in build/.
+- Old scores for the six that left stay in storage, unused.
