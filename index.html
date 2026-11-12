@@ -555,7 +555,7 @@
         <button class="btn" id="backup-share">Share backup</button>
         <button class="btn" id="backup-restore">Restore from backup</button>
       </div>
-      <input type="file" id="restore-file-input" accept="application/json,.json" hidden>
+      <input type="file" id="restore-file-input" accept="application/json,.json,text/plain,.txt" hidden>
       <div class="backup-status" id="backup-status" hidden></div>
     </div>
     <!-- Share card: a QR code for this app, and links to the sister apps. -->
@@ -575,7 +575,7 @@
     </div>
     <div class="contact">Any problems: Andrew 07973 835165</div>
     <p class="credit">Stroke order data from <a href="https://kanjivg.tagaini.net/" target="_blank" rel="noopener">KanjiVG</a> © Ulrich Apel, CC BY-SA 3.0. Meanings and readings from <a href="https://www.edrdg.org/wiki/index.php/KANJIDIC_Project" target="_blank" rel="noopener">KANJIDIC2</a> © EDRDG, CC BY-SA 4.0.</p>
-    <div class="credit version">v261112.001</div>
+    <div class="credit version">v261112.002</div>
   </div>
 </main>
 
@@ -1775,9 +1775,13 @@ function backupFileName(app) {
 // SHARE, as in the drill apps (12 Nov 2026): the same file handed to the
 // phone's share sheet (Drive, OneDrive, Synology, email); a plain download
 // where a browser can't share files; nothing if you cancel.
+// Shared as .txt: Chrome on Android refuses .json files (it shares only
+// pictures, sound, video, PDF and plain text), so the first version always
+// fell back to a download. Same contents; Restore takes .txt too.
 async function shareBackupFile(json, name, download, status) {
+  name = name.replace(/\.json$/, '.txt');
   let file;
-  try { file = new File([json], name, { type: 'application/json' }); } catch (e) { file = null; }
+  try { file = new File([json], name, { type: 'text/plain' }); } catch (e) { file = null; }
   if (!file || !navigator.canShare || !navigator.canShare({ files: [file] })) { download(); return; }
   try { await navigator.share({ files: [file], title: name }); status('Backup shared'); }
   catch (e) { if (e && e.name !== 'AbortError') download(); }
