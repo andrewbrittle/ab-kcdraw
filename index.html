@@ -549,9 +549,10 @@
     <button class="setting" id="set-romaji"><div><div class="n">Show romaji</div><div class="d">Romaji next to the readings</div></div><div class="toggle"></div></button>
     <!-- Back up my progress: same card and wording as the other two apps. -->
     <div class="setting static backup-card" id="backup-card">
-      <div><div class="n">Back up my progress</div><div class="d">Saves your scores to a file you can restore later</div></div>
+      <div><div class="n">Back up my progress</div><div class="d">Saves your scores to a file you can restore later, here or on another device. Share sends it straight to Drive, email or another device. Restoring replaces the scores on this device.</div></div>
       <div class="btn-row">
         <button class="btn" id="backup-download">Download backup</button>
+        <button class="btn" id="backup-share">Share backup</button>
         <button class="btn" id="backup-restore">Restore from backup</button>
       </div>
       <input type="file" id="restore-file-input" accept="application/json,.json" hidden>
@@ -574,7 +575,7 @@
     </div>
     <div class="contact">Any problems: Andrew 07973 835165</div>
     <p class="credit">Stroke order data from <a href="https://kanjivg.tagaini.net/" target="_blank" rel="noopener">KanjiVG</a> © Ulrich Apel, CC BY-SA 3.0. Meanings and readings from <a href="https://www.edrdg.org/wiki/index.php/KANJIDIC_Project" target="_blank" rel="noopener">KANJIDIC2</a> © EDRDG, CC BY-SA 4.0.</p>
-    <div class="credit version">v261111.001</div>
+    <div class="credit version">v261112.001</div>
   </div>
 </main>
 
@@ -1091,7 +1092,7 @@ function toggleSettings() {
    bump LATEST_CHANGELOG_ENTRY to its date (add a letter for a second entry
    on the same day). Opening Settings marks it seen; the What's new link stays
    green for that visit so you can still find it. */
-const LATEST_CHANGELOG_ENTRY = '2026-11-09';
+const LATEST_CHANGELOG_ENTRY = '2026-11-12';
 function applyUpdateFlag() { $('gear').classList.toggle('has-update', settings.lastSeenChangelog !== LATEST_CHANGELOG_ENTRY); }
 function markChangelogSeen() {
   const isNew = settings.lastSeenChangelog !== LATEST_CHANGELOG_ENTRY;
@@ -1765,14 +1766,32 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:' && $('install-
 function backupStatus(msg, isError) {
   const el = $('backup-status'); el.textContent = msg; el.hidden = false; el.classList.toggle('error', !!isError);
 }
-$('backup-download').onclick = () => {
-  const data = { app: 'kanji-strokes', v: 1, saved: new Date().toISOString(), scores, conf, neat: neatLog, picked: settings.picked };
-  const url = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: 'application/json' }));
+// Dated to the minute, as in the drill apps (12 Nov 2026), so several in a
+// day can be told apart.
+function backupFileName(app) {
+  const d = new Date(), p = n => String(n).padStart(2, '0');
+  return `${app}-backup-${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}.json`;
+}
+// SHARE, as in the drill apps (12 Nov 2026): the same file handed to the
+// phone's share sheet (Drive, OneDrive, Synology, email); a plain download
+// where a browser can't share files; nothing if you cancel.
+async function shareBackupFile(json, name, download, status) {
+  let file;
+  try { file = new File([json], name, { type: 'application/json' }); } catch (e) { file = null; }
+  if (!file || !navigator.canShare || !navigator.canShare({ files: [file] })) { download(); return; }
+  try { await navigator.share({ files: [file], title: name }); status('Backup shared'); }
+  catch (e) { if (e && e.name !== 'AbortError') download(); }
+}
+const backupJson = () => JSON.stringify({ app: 'kanji-strokes', v: 1, saved: new Date().toISOString(), scores, conf, neat: neatLog, picked: settings.picked });
+function downloadStrokesBackup() {
+  const url = URL.createObjectURL(new Blob([backupJson()], { type: 'application/json' }));
   const a = document.createElement('a');
-  a.href = url; a.download = 'kanji-strokes-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+  a.href = url; a.download = backupFileName('kanji-strokes');
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
   backupStatus('Backup downloaded');
-};
+}
+$('backup-download').onclick = downloadStrokesBackup;
+$('backup-share').onclick = () => shareBackupFile(backupJson(), backupFileName('kanji-strokes'), downloadStrokesBackup, backupStatus);
 $('backup-restore').onclick = () => $('restore-file-input').click();
 $('restore-file-input').onchange = e => {
   const file = e.target.files && e.target.files[0];
@@ -1785,7 +1804,7 @@ $('restore-file-input').onchange = e => {
     if (!d || typeof d !== 'object' || d.app !== 'kanji-strokes' || typeof d.scores !== 'object' || typeof d.conf !== 'object') {
       backupStatus(d && d.app ? "That's a backup from a different app" : "That file isn't a Kanji strokes backup", true); return;
     }
-    if (!window.confirm("This replaces your current progress with what's in this backup. Continue?")) return;
+    if (!window.confirm('Replace ALL the scores on this device with the ones in ' + file.name + '?\n\nAnything practised on this device since that backup was made will be lost. To keep it, download or share a backup from here first.')) return;
     const replace = (obj, src) => { Object.keys(obj).forEach(k => delete obj[k]); Object.assign(obj, src || {}); };
     replace(scores, d.scores); replace(conf, d.conf); replace(neatLog, d.neat);
     if (d.picked && typeof d.picked === 'object') settings.picked = Object.assign({ hira: [], kata: [] }, d.picked);
